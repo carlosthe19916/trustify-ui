@@ -12,7 +12,7 @@ FROM registry.access.redhat.com/ubi9/nodejs-20-minimal:latest
 # Add tar package to allow copying files with kubectl scp
 USER 0
 RUN microdnf -y install tar procps-ng && microdnf clean all
-
+RUN ls 
 USER 1001
 
 LABEL name="trustify/trustify-ui" \
