@@ -14,7 +14,7 @@ const queryClient = new QueryClient();
 
 const container = document.getElementById("root");
 const root = createRoot(container!);
-
+constole.log("test");
 const renderApp = () => {
   return root.render(
     <React.StrictMode>
