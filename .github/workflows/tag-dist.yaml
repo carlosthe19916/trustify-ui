@@ -32,9 +32,13 @@ jobs:
         env:
           SOURCE: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.${INPUT_ORGANIZATION_DOMAIN}"
           git clone "$SOURCE" publish
           cd publish
-          git switch -c publish/${{ github.ref_name }}
+          git fetch --tags
+          git checkout publish/${{ github.ref_name }} 2>/dev/null || git checkout -b publish/${{ github.ref_name }}
+          git merge ${{ github.ref_name }} -X theirs
       - name: Copy dist folder
         shell: bash
         run: |
@@ -44,11 +48,12 @@ jobs:
         working-directory: publish
         shell: bash
         run: |
-          git config --global user.name "${GITHUB_ACTOR}"
-          git config --global user.email "${GITHUB_ACTOR}@users.noreply.${INPUT_ORGANIZATION_DOMAIN}"
           git add -f client/dist
-          git commit -m "Checkin dist dir"
-          git fetch --tags
+          if [ -n "$(git diff --cached)" ]; then
+            git commit -m "Checkin dist dir"
+          else
+            echo "No changes detected"
+          fi
           git tag static-${{ github.ref_name }} --force
-          git push origin publish/${{ github.ref_name }}
+          git push --set-upstream origin publish/${{ github.ref_name }}
           git push origin static-${{ github.ref_name }} --force
