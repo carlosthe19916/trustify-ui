@@ -7,20 +7,41 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: tag-dist
+
 jobs:
   tag-dist:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: build
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: Install
+        working-directory: build
         run: npm clean-install --ignore-scripts
       - name: Build
+        working-directory: build
         run: npm run build
+      - name: Clone for publishing
+        shell: bash
+        env:
+          SOURCE: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: |
+          git clone "$SOURCE" publish
+          cd publish
+          git switch -c publish/${{ github.ref_name }}
+      - name: Copy dist folder
+        shell: bash
+        run: |
+          rm -Rf publish/client/dist
+          cp -a build/client/dist publish/client/
       - name: Commit and Tag the static dist dir
+        working-directory: publish
         shell: bash
         run: |
           git config --global user.name "${GITHUB_ACTOR}"
@@ -29,5 +50,5 @@ jobs:
           git commit -m "Checkin dist dir"
           git fetch --tags
           git tag static-${{ github.ref_name }} --force
+          git push origin publish/${{ github.ref_name }}
           git push origin static-${{ github.ref_name }} --force
-
