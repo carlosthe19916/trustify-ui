@@ -76,3 +76,4 @@ Mock data is defined at `client/src/mocks`
 > [!NOTE]
 > When using the crate it is expected to build the UI always in Prod mode
 1
+2
