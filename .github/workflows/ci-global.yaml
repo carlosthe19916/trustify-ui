@@ -35,4 +35,5 @@ jobs:
     uses: trustification/trustify-ci/.github/workflows/global-ci.yml@main
     with:
       artifact: trustd
+      server_image: ghcr.io/trustification/trustd:latest
       run_api_tests: false
