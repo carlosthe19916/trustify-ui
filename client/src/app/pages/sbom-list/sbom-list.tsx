@@ -31,7 +31,6 @@ import {
 } from "@patternfly/react-table";
 
 import { TablePersistenceKeyPrefixes } from "@app/Constants";
-import { SBOM } from "@app/api/models";
 import { EditLabelsModal } from "@app/components/EditLabelsModal";
 import { FilterToolbar, FilterType } from "@app/components/FilterToolbar";
 import { LabelsAsList } from "@app/components/LabelsAsList";
@@ -59,7 +58,8 @@ import {
   useUploadSBOM,
 } from "@app/queries/sboms";
 import { formatDate } from "@app/utils/utils";
-import {useNotifyErrorCallback} from "@app/hooks/useNotifyErrorCallback";
+import { useNotifyErrorCallback } from "@app/hooks/useNotifyErrorCallback";
+import { SbomPackage, SbomSummary } from "@app/client";
 
 export const SbomList: React.FC = () => {
   const { pushNotification } = React.useContext(NotificationsContext);
@@ -71,9 +71,11 @@ export const SbomList: React.FC = () => {
   type RowAction = "editLabels";
   const [selectedRowAction, setSelectedRowAction] =
     React.useState<RowAction | null>(null);
-  const [selectedRow, setSelectedRow] = React.useState<SBOM | null>(null);
+  const [selectedRow, setSelectedRow] = React.useState<SbomSummary | null>(
+    null
+  );
 
-  const prepareActionOnRow = (action: RowAction, row: SBOM) => {
+  const prepareActionOnRow = (action: RowAction, row: SbomSummary) => {
     setSelectedRowAction(action);
     setSelectedRow(row);
   };
@@ -94,7 +96,10 @@ export const SbomList: React.FC = () => {
     useNotifyErrorCallback("Error occurred while deleting the SBOM")
   );
 
-  const execSaveLabels = (row: SBOM, labels: { [key: string]: string }) => {
+  const execSaveLabels = (
+    row: SbomSummary,
+    labels: { [key: string]: string }
+  ) => {
     updateSbomLabels({ ...row, labels });
   };
 
@@ -128,7 +133,6 @@ export const SbomList: React.FC = () => {
     result: { data: advisories, total: totalItemCount },
     isFetching,
     fetchError,
-    refetch,
   } = useFetchSBOMs(
     getHubRequestParams({
       ...tableControlState,
@@ -259,7 +263,10 @@ export const SbomList: React.FC = () => {
                           {item.labels && <LabelsAsList value={item.labels} />}
                         </Td>
 
-                        <Td width={10} {...getTdProps({ columnKey: "packages" })}>
+                        <Td
+                          width={10}
+                          {...getTdProps({ columnKey: "packages" })}
+                        >
                           <PackagesCount sbomId={item.id} />
                         </Td>
                         <Td isActionCell>
@@ -279,7 +286,8 @@ export const SbomList: React.FC = () => {
                               },
                               {
                                 title: "Delete",
-                                onClick: () => deleteSBOMByIdMutation.mutate(item.id),
+                                onClick: () =>
+                                  deleteSBOMByIdMutation.mutate(item.id),
                               },
                             ]}
                           />
@@ -376,10 +384,7 @@ export const SbomList: React.FC = () => {
 };
 
 interface SbomDescribedByProps {
-  described_by: {
-    name: string;
-    version: string;
-  }[];
+  described_by: SbomPackage[];
 }
 
 export const SbomDescribedBy: React.FC<SbomDescribedByProps> = ({
