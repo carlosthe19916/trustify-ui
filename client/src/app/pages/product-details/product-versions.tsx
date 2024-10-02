@@ -6,8 +6,8 @@ import dayjs from "dayjs";
 import { Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 
-import { Product, SBOM } from "@app/api/models";
-import { getSBOMById } from "@app/api/rest";
+import { client } from "@app/axios-config/apiInit";
+import { getSbom, ProductDetails, SbomSummary } from "@app/client";
 import { FilterToolbar, FilterType } from "@app/components/FilterToolbar";
 import { LabelsAsList } from "@app/components/LabelsAsList";
 import { SimplePagination } from "@app/components/SimplePagination";
@@ -21,18 +21,18 @@ import { formatDate } from "@app/utils/utils";
 interface TableData {
   sbomId: string;
   sbomVersion: string;
-  sbom?: SBOM;
+  sbom?: SbomSummary;
 }
 
 interface ProductVersionsProps {
-  product: Product;
+  product: ProductDetails;
 }
 
 export const ProductVersions: React.FC<ProductVersionsProps> = ({
   product,
 }) => {
   const [allSbombs, setAllSboms] = React.useState<TableData[]>([]);
-  const [sbomsById, setSbomsById] = React.useState<Map<string, SBOM>>(
+  const [sbomsById, setSbomsById] = React.useState<Map<string, SbomSummary>>(
     new Map()
   );
   const [isFetchingSboms, setIsFetchingSboms] = React.useState(false);
@@ -42,7 +42,7 @@ export const ProductVersions: React.FC<ProductVersionsProps> = ({
       return {
         sbomId: sbom.sbom_id,
         sbomVersion: sbom.version,
-      };
+      } as TableData;
     });
 
     setAllSboms(sbombs);
@@ -50,7 +50,11 @@ export const ProductVersions: React.FC<ProductVersionsProps> = ({
 
     Promise.all(
       sbombs
-        .map((item) => getSBOMById(item.sbomId))
+        .map((item) => {
+          return getSbom({ client, path: { id: item.sbomId } }).then(
+            (response) => response.data
+          );
+        })
         .map((sbom) => sbom.catch(() => null))
     ).then((sboms) => {
       const validSboms = sboms.reduce((prev, current) => {
@@ -60,9 +64,9 @@ export const ProductVersions: React.FC<ProductVersionsProps> = ({
           // Filter out error responses
           return prev;
         }
-      }, [] as SBOM[]);
+      }, [] as SbomSummary[]);
 
-      const sbomsById = new Map<string, SBOM>();
+      const sbomsById = new Map<string, SbomSummary>();
       validSboms.forEach((sbom) => sbomsById.set(sbom.id, sbom));
 
       setSbomsById(sbomsById);

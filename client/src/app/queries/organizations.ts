@@ -2,7 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 
 import { HubRequestParams } from "@app/api/models";
-import { getOrganizationById, getOrganizations } from "@app/api/rest";
+
+import { client } from "../axios-config/apiInit";
+import { getOrganization, listOrganizations } from "../client";
+import { requestParamsQuery } from "../hooks/table-controls";
 
 export const OrganizationsQueryKey = "organizations";
 
@@ -12,14 +15,19 @@ export const useFetchOrganizations = (
 ) => {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: [OrganizationsQueryKey, params],
-    queryFn: () => getOrganizations(params),
+    queryFn: () => {
+      return listOrganizations({
+        client,
+        query: { ...requestParamsQuery(params) },
+      });
+    },
     refetchInterval: !refetchDisabled ? 5000 : false,
   });
   return {
     result: {
-      data: data?.data || [],
-      total: data?.total ?? 0,
-      params: data?.params ?? params,
+      data: data?.data?.items || [],
+      total: data?.data?.total ?? 0,
+      params: params,
     },
     isFetching: isLoading,
     fetchError: error,
@@ -27,15 +35,13 @@ export const useFetchOrganizations = (
   };
 };
 
-export const useFetchOrganizationById = (id: number | string) => {
+export const useFetchOrganizationById = (id: string) => {
   const { data, isLoading, error } = useQuery({
     queryKey: [OrganizationsQueryKey, id],
-    queryFn: () => getOrganizationById(id),
-    enabled: id !== undefined,
+    queryFn: () => getOrganization({ client, path: { id } }),
   });
-
   return {
-    organization: data,
+    organization: data?.data,
     isFetching: isLoading,
     fetchError: error as AxiosError,
   };
