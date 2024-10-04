@@ -4,12 +4,18 @@ import { NavLink } from "react-router-dom";
 import { AxiosError } from "axios";
 
 import {
+  Button,
   DescriptionList,
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
+  Label,
+  LabelGroup,
   List,
   ListItem,
+  Popover,
+  Stack,
+  StackItem,
 } from "@patternfly/react-core";
 import {
   ActionsColumn,
@@ -43,6 +49,8 @@ import {
 import { formatDate } from "@app/utils/utils";
 
 import { SbomSearchContext } from "./sbom-context";
+import { SeverityShieldAndText } from "@app/components/SeverityShieldAndText";
+import { VulnerabilityGallery } from "@app/components/VulnerabilityGallery";
 
 export const SbomTable: React.FC = ({}) => {
   const { isFetching, fetchError, totalItemCount, tableControls } =
@@ -147,7 +155,7 @@ export const SbomTable: React.FC = ({}) => {
                     rowIndex={rowIndex}
                   >
                     <Td
-                      width={40}
+                      width={30}
                       {...getTdProps({
                         columnKey: "name",
                         isCompoundExpandToggle: true,
@@ -175,9 +183,232 @@ export const SbomTable: React.FC = ({}) => {
                       <PackagesCount sbomId={item.id} />
                     </Td>
                     <Td
-                      width={10}
+                      width={20}
                       {...getTdProps({ columnKey: "vulnerabilities" })}
-                    ></Td>
+                    >
+                      <Stack>
+                        <StackItem>
+                          <LabelGroup
+                            categoryName="OSV"
+                            isCompact
+                            defaultIsOpen
+                          >
+                            <Label color="red" isCompact>
+                              1
+                            </Label>
+                            <Label color="orange" isCompact>
+                              10
+                            </Label>
+                            <Label color="gold" isCompact>
+                              20
+                            </Label>
+                            <Label color="blue" isCompact>
+                              20
+                            </Label>
+                            <Label color="grey" isCompact>
+                              20
+                            </Label>
+                          </LabelGroup>
+                          <LabelGroup
+                            categoryName="CVE"
+                            isCompact
+                            defaultIsOpen
+                          >
+                            <Label color="red" isCompact>
+                              1
+                            </Label>
+                            <Label color="orange" isCompact>
+                              10
+                            </Label>
+                            <Label color="gold" isCompact>
+                              20
+                            </Label>
+                            <Label color="blue" isCompact>
+                              20
+                            </Label>
+                            <Label color="grey" isCompact>
+                              20
+                            </Label>
+                          </LabelGroup>
+                          <LabelGroup
+                            categoryName="Red Hat CSAF"
+                            isCompact
+                            defaultIsOpen
+                          >
+                            <Label color="red" isCompact>
+                              1
+                            </Label>
+                            <Label color="orange" isCompact>
+                              10
+                            </Label>
+                            <Label color="gold" isCompact>
+                              20
+                            </Label>
+                            <Label color="blue" isCompact>
+                              20
+                            </Label>
+                            <Label color="grey" isCompact>
+                              20
+                            </Label>
+                          </LabelGroup>
+                        </StackItem>
+                      </Stack>
+
+                      {/* <Stack>
+                        <StackItem>
+                          <Popover
+                            triggerAction="hover"
+                            headerContent={<div>OSV</div>}
+                            bodyContent={
+                              <div>
+                                <Table
+                                  aria-label="Simple table"
+                                  variant="compact"
+                                >
+                                  <Tbody>
+                                    <Tr>
+                                      <Td>11</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="critical" />
+                                      </Td>
+                                    </Tr>
+                                    <Tr>
+                                      <Td>12</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="high" />
+                                      </Td>
+                                    </Tr>
+                                    <Tr>
+                                      <Td>13</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="medium" />
+                                      </Td>
+                                    </Tr>
+                                    <Tr>
+                                      <Td>14</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="low" />
+                                      </Td>
+                                    </Tr>
+                                    <Tr>
+                                      <Td>15</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="none" />
+                                      </Td>
+                                    </Tr>
+                                  </Tbody>
+                                </Table>
+                              </div>
+                            }
+                          >
+                            <Button variant="link" size="sm">
+                              OSV (11)
+                            </Button>
+                          </Popover>
+                          <Popover
+                            triggerAction="hover"
+                            headerContent={<div>CVE</div>}
+                            bodyContent={
+                              <div>
+                                <Table
+                                  aria-label="Simple table"
+                                  variant="compact"
+                                >
+                                  <Tbody>
+                                    <Tr>
+                                      <Td>11</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="critical" />
+                                      </Td>
+                                    </Tr>
+                                    <Tr>
+                                      <Td>12</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="high" />
+                                      </Td>
+                                    </Tr>
+                                    <Tr>
+                                      <Td>13</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="medium" />
+                                      </Td>
+                                    </Tr>
+                                    <Tr>
+                                      <Td>14</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="low" />
+                                      </Td>
+                                    </Tr>
+                                    <Tr>
+                                      <Td>15</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="none" />
+                                      </Td>
+                                    </Tr>
+                                  </Tbody>
+                                </Table>
+                              </div>
+                            }
+                          >
+                            <Button variant="link" size="sm">
+                              CVE (12)
+                            </Button>
+                          </Popover>
+                          <Popover
+                            triggerAction="hover"
+                            headerContent={<div>Red Hat CSAF</div>}
+                            bodyContent={
+                              <div>
+                                <Table
+                                  aria-label="Simple table"
+                                  variant="compact"
+                                >
+                                  <Tbody>
+                                    <Tr>
+                                      <Td>11</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="critical" />
+                                      </Td>
+                                    </Tr>
+                                    <Tr>
+                                      <Td>12</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="high" />
+                                      </Td>
+                                    </Tr>
+                                    <Tr>
+                                      <Td>13</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="medium" />
+                                      </Td>
+                                    </Tr>
+                                    <Tr>
+                                      <Td>14</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="low" />
+                                      </Td>
+                                    </Tr>
+                                    <Tr>
+                                      <Td>15</Td>
+                                      <Td>
+                                        <SeverityShieldAndText value="none" />
+                                      </Td>
+                                    </Tr>
+                                  </Tbody>
+                                </Table>
+                              </div>
+                            }
+                          >
+                            <Button variant="link" size="sm">
+                              Red Hat CSAF (13)
+                            </Button>
+                          </Popover>
+                        </StackItem>
+                      </Stack> */}
+
+                      {/* <VulnerabilityGallery severities={{critical: 1, high: 2, medium: 3, low: 4, none: 5}}/> */}
+
+                    </Td>
                     <Td isActionCell>
                       <ActionsColumn
                         items={[
