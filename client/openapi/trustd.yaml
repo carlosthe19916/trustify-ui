@@ -4,7 +4,7 @@ info:
   description: Software Supply-Chain Security API
   license:
     name: Apache-2.0
-  version: 0.1.0-alpha.18
+  version: 0.1.0-alpha.19
 paths:
   /.well-known/trustify:
     get:
@@ -64,6 +64,14 @@ paths:
           type: integer
           format: int64
           minimum: 0
+      - name: deprecated
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - Ignore
+          - Consider
       responses:
         '200':
           description: Matching vulnerabilities
@@ -240,6 +248,64 @@ paths:
           description: The request was invalid
         '404':
           description: The AI service is not enabled
+  /api/v1/ai/flags:
+    get:
+      tags:
+      - ai
+      operationId: aiFlags
+      responses:
+        '200':
+          description: The resulting Flags
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiFlags'
+        '404':
+          description: The AI service is not enabled
+  /api/v1/ai/tools:
+    get:
+      tags:
+      - ai
+      operationId: aiTools
+      responses:
+        '200':
+          description: The resulting list of tools
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiTool'
+        '404':
+          description: The AI service is not enabled
+  /api/v1/ai/tools/{name}:
+    post:
+      tags:
+      - ai
+      operationId: aiToolCall
+      parameters:
+      - name: name
+        in: path
+        description: Name of the tool to call
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema: {}
+        required: true
+      responses:
+        '200':
+          description: The result of the tool call
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: The tool request was invalid
+        '404':
+          description: The tool was not found
   /api/v1/analysis/dep:
     get:
       tags:
@@ -1246,6 +1312,14 @@ paths:
       summary: Retrieve details of a fully-qualified pURL
       operationId: getPurl
       parameters:
+      - name: deprecated
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - Ignore
+          - Consider
       - name: key
         in: path
         description: opaque identifier for a fully-qualified PURL, or URL-encoded pURL itself
@@ -1393,7 +1467,7 @@ paths:
           nullable: true
       - name: id
         in: query
-        description: Find by a ID of a package
+        description: Find by an ID of a package
         required: false
         schema:
           type: string
@@ -1958,6 +2032,25 @@ components:
               All CVSS3 scores from the advisory for the given vulnerability.
               May include several, varying by minor version of the CVSS3 vector.
       description: Summary of information from this advisory regarding a single specific vulnerability.
+    AiFlags:
+      type: object
+      required:
+      - completions
+      properties:
+        completions:
+          type: boolean
+    AiTool:
+      type: object
+      required:
+      - name
+      - description
+      - parameters
+      properties:
+        description:
+          type: string
+        name:
+          type: string
+        parameters: {}
     AnalysisStatus:
       type: object
       required:
@@ -2108,6 +2201,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ChatMessage'
+    ClearlyDefinedCurationImporter:
+      allOf:
+      - $ref: '#/components/schemas/CommonImporter'
+      - type: object
+        properties:
+          source:
+            type: string
+          types:
+            type: array
+            items:
+              $ref: '#/components/schemas/ClearlyDefinedPackageType'
+            uniqueItems: true
     ClearlyDefinedImporter:
       allOf:
       - $ref: '#/components/schemas/CommonImporter'
@@ -2264,6 +2369,11 @@ components:
           type: string
         sbom_id:
           type: string
+    Deprecation:
+      type: string
+      enum:
+      - Ignore
+      - Consider
     Id:
       type: string
       description: A hash/digest prefixed with its type.
@@ -2309,6 +2419,12 @@ components:
         properties:
           clearlyDefined:
             $ref: '#/components/schemas/ClearlyDefinedImporter'
+      - type: object
+        required:
+        - clearlyDefinedCuration
+        properties:
+          clearlyDefinedCuration:
+            $ref: '#/components/schemas/ClearlyDefinedCurationImporter'
       - type: object
         required:
         - cwe

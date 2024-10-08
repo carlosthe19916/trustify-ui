@@ -84,6 +84,16 @@ export type AdvisoryVulnerabilitySummary = AdvisoryVulnerabilityHead & {
   cvss3_scores: Array<string>;
 };
 
+export type AiFlags = {
+  completions: boolean;
+};
+
+export type AiTool = {
+  description: string;
+  name: string;
+  parameters: unknown;
+};
+
 export type AnalysisStatus = {
   graph_count: number;
   sbom_count: number;
@@ -152,6 +162,11 @@ export type ChatMessage = {
 
 export type ChatState = {
   messages: Array<ChatMessage>;
+};
+
+export type ClearlyDefinedCurationImporter = CommonImporter & {
+  source?: string;
+  types?: Array<ClearlyDefinedPackageType>;
 };
 
 export type ClearlyDefinedImporter = CommonImporter & {
@@ -232,6 +247,8 @@ export type DepSummary = {
   sbom_id: string;
 };
 
+export type Deprecation = "Ignore" | "Consider";
+
 /**
  * A hash/digest prefixed with its type.
  */
@@ -256,6 +273,9 @@ export type ImporterConfiguration =
     }
   | {
       clearlyDefined: ClearlyDefinedImporter;
+    }
+  | {
+      clearlyDefinedCuration: ClearlyDefinedCurationImporter;
     }
   | {
       cwe: CweImporter;
@@ -988,6 +1008,7 @@ export type InfoError = unknown;
 
 export type ListAdvisoriesData = {
   query?: {
+    deprecated?: "Ignore" | "Consider";
     /**
      * The maximum number of entries to return.
      *
@@ -1103,6 +1124,28 @@ export type CompletionsData = {
 export type CompletionsResponse = ChatState;
 
 export type CompletionsError = unknown;
+
+export type AiFlagsResponse = AiFlags;
+
+export type AiFlagsError = unknown;
+
+export type AiToolsResponse = Array<AiTool>;
+
+export type AiToolsError = unknown;
+
+export type AiToolCallData = {
+  body: unknown;
+  path: {
+    /**
+     * Name of the tool to call
+     */
+    name: string;
+  };
+};
+
+export type AiToolCallResponse = string;
+
+export type AiToolCallError = unknown;
 
 export type SearchComponentDepsData = {
   query?: {
@@ -1663,6 +1706,9 @@ export type GetPurlData = {
      */
     key: string;
   };
+  query?: {
+    deprecated?: "Ignore" | "Consider";
+  };
 };
 
 export type GetPurlResponse = PurlDetails;
@@ -1715,7 +1761,7 @@ export type UploadSbomError = unknown;
 export type ListRelatedSbomsData = {
   query?: {
     /**
-     * Find by a ID of a package
+     * Find by an ID of a package
      */
     id?: string | null;
     /**
