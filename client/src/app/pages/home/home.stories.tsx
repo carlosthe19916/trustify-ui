@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 
 import { Home } from "./home";
 
-// More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
+// More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export test
 const meta = {
   title: "Home",
   component: Home,
