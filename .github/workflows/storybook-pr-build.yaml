@@ -3,7 +3,7 @@ name: Storybook - PR Preview Build
 on:
   pull_request:
     paths:
-      - "*.stories.tsx"
+      - "**/*.stories.tsx"
 
 jobs:
   build-pr-preview:
