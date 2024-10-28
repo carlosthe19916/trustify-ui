@@ -39,6 +39,7 @@ jobs:
         run: npm clean-install --ignore-scripts
       - name: Build
         run: |
+          npm run build
           npm run build-storybook
       - name: Setup Pages
         uses: actions/configure-pages@v5
