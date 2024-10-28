@@ -30,13 +30,12 @@ jobs:
       #   run: npm run lint
       - name: Build
         run: npm run build
+      - name: Build storybook
+        run: npm run build-storybook
       - name: Test
         run: npm run test -- --coverage --watchAll=false
       - name: Format check
         run: npm run format:check
-
-      - name: Build storybook
-        run: npm run build-storybook
 
       - name: Crate Format
         working-directory: ./crate
