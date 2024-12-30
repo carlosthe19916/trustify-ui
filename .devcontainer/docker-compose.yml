@@ -1,0 +1,15 @@
+networks:
+  trustification:
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - ../..:/workspaces:cached
+    command: sleep infinity
+    networks:
+      - trustification
