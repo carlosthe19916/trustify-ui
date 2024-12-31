@@ -1,27 +1,13 @@
 {
   "name": "trustify-ui",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "frontend",
-  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  // Features to add to the dev container. More info: https://containers.dev/features.
-  "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "20"
-    }
+  "build": {
+    "dockerfile": "Dockerfile"
   },
-  // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  "forwardPorts": [
-    3000
-  ],
-  // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
-  // Configure tool-specific properties.
-  "customizations": {
-    "jetbrains": {
-      "backend": "WebStorm"
-    }
-  },
-  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-  "remoteUser": "root"
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "workspaceFolder": "/workspace",
+  "containerUser" : "vscode",
+  "runArgs": [
+    "--privileged",
+    "--userns=keep-id"
+  ]
 }
