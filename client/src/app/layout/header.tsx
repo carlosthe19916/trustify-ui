@@ -12,10 +12,11 @@ import {
   DropdownItem,
   DropdownList,
   Masthead,
-  MastheadBrand,
+  MastheadLogo,
   MastheadContent,
   MastheadMain,
   MastheadToggle,
+  MastheadBrand,
   MenuToggle,
   MenuToggleElement,
   PageToggleButton,
@@ -24,11 +25,16 @@ import {
   ToolbarContent,
   ToolbarGroup,
   ToolbarItem,
+  Switch,
+  ToggleGroup,
+  ToggleGroupItem,
 } from "@patternfly/react-core";
 
 import EllipsisVIcon from "@patternfly/react-icons/dist/esm/icons/ellipsis-v-icon";
 import HelpIcon from "@patternfly/react-icons/dist/esm/icons/help-icon";
 import BarsIcon from "@patternfly/react-icons/dist/js/icons/bars-icon";
+import CogIcon from "@patternfly/react-icons/dist/esm/icons/cog-icon";
+import { SunIcon, MoonIcon } from "@patternfly/react-icons/";
 
 import { isAuthRequired } from "@app/Constants";
 import useBranding from "@app/hooks/useBranding";
@@ -37,6 +43,20 @@ import imgAvatar from "../images/avatar.svg";
 import { AboutApp } from "./about";
 
 export const HeaderApp: React.FC = () => {
+  const [isDarkTheme, setIsDarkTheme] = useState(
+    localStorage.getItem("isDarkTheme") === "true" ? true : false
+  );
+
+  React.useEffect(() => {
+    if (isDarkTheme) {
+      document.documentElement.classList.add("pf-v6-theme-dark");
+      localStorage.setItem("isDarkTheme", "true");
+    } else {
+      document.documentElement.classList.remove("pf-v6-theme-dark");
+      localStorage.setItem("isDarkTheme", "false");
+    }
+  }, [isDarkTheme]);
+
   const {
     masthead: { leftBrand, leftTitle, rightBrand },
   } = useBranding();
@@ -73,29 +93,31 @@ export const HeaderApp: React.FC = () => {
       <AboutApp isOpen={isAboutOpen} onClose={toggleIsAboutOpen} />
 
       <Masthead>
-        <MastheadToggle>
-          <PageToggleButton variant="plain" aria-label="Global navigation">
-            <BarsIcon />
-          </PageToggleButton>
-        </MastheadToggle>
         <MastheadMain>
-          <MastheadBrand>
-            {leftBrand ? (
-              <Brand
-                src={leftBrand.src}
-                alt={leftBrand.alt}
-                heights={{ default: leftBrand.height }}
-              />
-            ) : null}
-            {leftTitle ? (
-              <Title
-                className="logo-pointer"
-                headingLevel={leftTitle?.heading ?? "h1"}
-                size={leftTitle?.size ?? "2xl"}
-              >
-                {leftTitle.text}
-              </Title>
-            ) : null}
+          <MastheadToggle>
+            <PageToggleButton variant="plain" aria-label="Global navigation">
+              <BarsIcon />
+            </PageToggleButton>
+          </MastheadToggle>
+          <MastheadBrand data-codemods>
+            <MastheadLogo data-codemods>
+              {leftBrand ? (
+                <Brand
+                  src={leftBrand.src}
+                  alt={leftBrand.alt}
+                  heights={{ default: leftBrand.height }}
+                />
+              ) : null}
+              {leftTitle ? (
+                <Title
+                  className="logo-pointer"
+                  headingLevel={leftTitle?.heading ?? "h1"}
+                  size={leftTitle?.size ?? "2xl"}
+                >
+                  {leftTitle.text}
+                </Title>
+              ) : null}
+            </MastheadLogo>
           </MastheadBrand>
         </MastheadMain>
         <MastheadContent>
@@ -104,15 +126,30 @@ export const HeaderApp: React.FC = () => {
               {/* toolbar items to always show */}
               <ToolbarGroup
                 id="header-toolbar-tasks"
-                variant="icon-button-group"
-                align={{ default: "alignRight" }}
-              ></ToolbarGroup>
+                variant="action-group-plain"
+                align={{ default: "alignEnd" }}
+              >
+                <ToolbarItem>
+                  <ToggleGroup aria-label="Default with single selectable">
+                    <ToggleGroupItem
+                      icon={<SunIcon />}
+                      isSelected={!isDarkTheme}
+                      onChange={() => setIsDarkTheme(false)}
+                    />
+                    <ToggleGroupItem
+                      icon={<MoonIcon />}
+                      isSelected={isDarkTheme}
+                      onChange={() => setIsDarkTheme(true)}
+                    />
+                  </ToggleGroup>
+                </ToolbarItem>
+              </ToolbarGroup>
 
               {/* toolbar items to show at desktop sizes */}
               <ToolbarGroup
                 id="header-toolbar-desktop"
-                variant="icon-button-group"
-                spacer={{ default: "spacerNone", md: "spacerMd" }}
+                variant="action-group-plain"
+                gap={{ default: "gapNone", md: "gapMd" }}
                 visibility={{
                   default: "hidden",
                   "2xl": "visible",
@@ -123,21 +160,20 @@ export const HeaderApp: React.FC = () => {
               >
                 <ToolbarItem>
                   <Button
+                    icon={<HelpIcon />}
                     id="about-button"
                     aria-label="about button"
                     variant={ButtonVariant.plain}
                     onClick={toggleIsAboutOpen}
-                  >
-                    <HelpIcon />
-                  </Button>
+                  />
                 </ToolbarItem>
               </ToolbarGroup>
 
               {/* toolbar items to show at mobile sizes */}
               <ToolbarGroup
                 id="header-toolbar-mobile"
-                variant="icon-button-group"
-                spacer={{ default: "spacerNone", md: "spacerMd" }}
+                variant="action-group-plain"
+                gap={{ default: "gapNone", md: "gapMd" }}
                 visibility={{ lg: "hidden" }}
               >
                 <ToolbarItem>
@@ -202,7 +238,7 @@ export const HeaderApp: React.FC = () => {
                           }
                           isFullHeight
                           isExpanded={isUserDropdownOpen}
-                          icon={<Avatar src={imgAvatar} alt="" />}
+                          icon={<Avatar src={imgAvatar} alt="" size="sm" />}
                         >
                           {auth.user?.profile.preferred_username ||
                             auth.user?.profile.sub}

@@ -6,7 +6,6 @@ import {
   Button,
   EmptyState,
   EmptyStateBody,
-  EmptyStateIcon,
   EmptyStateVariant,
   Title,
 } from "@patternfly/react-core";
@@ -45,11 +44,15 @@ export const ErrorFallback = ({
 
   return (
     <Bullseye>
-      <EmptyState variant={EmptyStateVariant.sm}>
-        <EmptyStateIcon icon={UserNinjaIcon} />
-        <Title headingLevel="h2" size="lg">
-          Oops! Something went wrong.
-        </Title>
+      <EmptyState
+        titleText={
+          <Title headingLevel="h2" size="lg">
+            Oops! Something went wrong.
+          </Title>
+        }
+        icon={UserNinjaIcon}
+        variant={EmptyStateVariant.sm}
+      >
         <EmptyStateBody>
           Try to refresh your page or contact your admin.
           <Button
