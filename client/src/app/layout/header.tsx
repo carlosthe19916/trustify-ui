@@ -12,29 +12,29 @@ import {
   DropdownItem,
   DropdownList,
   Masthead,
-  MastheadLogo,
+  MastheadBrand,
   MastheadContent,
+  MastheadLogo,
   MastheadMain,
   MastheadToggle,
-  MastheadBrand,
   MenuToggle,
   MenuToggleElement,
   PageToggleButton,
+  Split,
+  SplitItem,
   Title,
+  ToggleGroup,
+  ToggleGroupItem,
   Toolbar,
   ToolbarContent,
   ToolbarGroup,
   ToolbarItem,
-  Switch,
-  ToggleGroup,
-  ToggleGroupItem,
 } from "@patternfly/react-core";
 
+import { MoonIcon, SunIcon } from "@patternfly/react-icons/";
 import EllipsisVIcon from "@patternfly/react-icons/dist/esm/icons/ellipsis-v-icon";
 import HelpIcon from "@patternfly/react-icons/dist/esm/icons/help-icon";
 import BarsIcon from "@patternfly/react-icons/dist/js/icons/bars-icon";
-import CogIcon from "@patternfly/react-icons/dist/esm/icons/cog-icon";
-import { SunIcon, MoonIcon } from "@patternfly/react-icons/";
 
 import { isAuthRequired } from "@app/Constants";
 import useBranding from "@app/hooks/useBranding";
@@ -101,22 +101,28 @@ export const HeaderApp: React.FC = () => {
           </MastheadToggle>
           <MastheadBrand data-codemods>
             <MastheadLogo data-codemods>
-              {leftBrand ? (
-                <Brand
-                  src={leftBrand.src}
-                  alt={leftBrand.alt}
-                  heights={{ default: leftBrand.height }}
-                />
-              ) : null}
-              {leftTitle ? (
-                <Title
-                  className="logo-pointer"
-                  headingLevel={leftTitle?.heading ?? "h1"}
-                  size={leftTitle?.size ?? "2xl"}
-                >
-                  {leftTitle.text}
-                </Title>
-              ) : null}
+              <Split>
+                <SplitItem>
+                  {leftBrand ? (
+                    <Brand
+                      src={leftBrand.src}
+                      alt={leftBrand.alt}
+                      heights={{ default: leftBrand.height }}
+                    />
+                  ) : null}
+                </SplitItem>
+                <SplitItem isFilled>
+                  {leftTitle ? (
+                    <Title
+                      className="logo-pointer"
+                      headingLevel={leftTitle?.heading ?? "h1"}
+                      size={leftTitle?.size ?? "2xl"}
+                    >
+                      {leftTitle.text}
+                    </Title>
+                  ) : null}
+                </SplitItem>
+              </Split>
             </MastheadLogo>
           </MastheadBrand>
         </MastheadMain>

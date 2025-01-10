@@ -1,7 +1,12 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 
-import { Nav, NavList, PageSidebar } from "@patternfly/react-core";
+import {
+  Nav,
+  NavList,
+  PageSidebar,
+  PageSidebarBody,
+} from "@patternfly/react-core";
 import { css } from "@patternfly/react-styles";
 
 import { LayoutTheme } from "./layout-constants";
@@ -99,5 +104,9 @@ export const SidebarApp: React.FC = () => {
     );
   };
 
-  return <PageSidebar>{renderPageNav()}</PageSidebar>;
+  return (
+    <PageSidebar>
+      <PageSidebarBody>{renderPageNav()}</PageSidebarBody>
+    </PageSidebar>
+  );
 };
