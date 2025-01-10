@@ -16,7 +16,7 @@ import {
   MultipleFileUploadMain,
   MultipleFileUploadStatus,
   MultipleFileUploadStatusItem,
-  Spinner
+  Spinner,
 } from "@patternfly/react-core";
 
 import FileIcon from "@patternfly/react-icons/dist/esm/icons/file-code-icon";

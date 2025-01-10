@@ -165,6 +165,12 @@ const config: Configuration = {
         include: [pathTo("../../node_modules/monaco-editor")],
         use: ["style-loader", "css-loader"],
       },
+      // For @patternfly/react-log-viewer
+      {
+        test: /\.css$/,
+        include: [pathTo("../../node_modules/@patternfly/react-log-viewer")],
+        use: ["style-loader", "css-loader"],
+      },
       {
         test: /\.ttf$/,
         type: "asset/resource",
