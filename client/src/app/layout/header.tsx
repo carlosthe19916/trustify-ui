@@ -138,11 +138,13 @@ export const HeaderApp: React.FC = () => {
                 <ToolbarItem>
                   <ToggleGroup aria-label="Default with single selectable">
                     <ToggleGroupItem
+                      aria-label="light theme"
                       icon={<SunIcon />}
                       isSelected={!isDarkTheme}
                       onChange={() => setIsDarkTheme(false)}
                     />
                     <ToggleGroupItem
+                      aria-label="dark theme"
                       icon={<MoonIcon />}
                       isSelected={isDarkTheme}
                       onChange={() => setIsDarkTheme(true)}

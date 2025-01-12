@@ -24,6 +24,7 @@ export const DefaultLayout: React.FC<DefaultLayoutProps> = ({ children }) => {
       isManagedSidebar
       skipToContent={PageSkipToContent}
       mainContainerId={pageId}
+      isContentFilled
     >
       <PageContentWithDrawerProvider>
         {children}
