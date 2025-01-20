@@ -106,23 +106,22 @@ export type AiTool = {
   parameters: unknown;
 };
 
-export type AllRelatedQuery = {
-  /**
-   * Find by an ID of a package
-   */
-  id?: string | null;
-  purl?: null | Purl;
-};
-
 export type AnalysisStatus = {
+  /**
+   * The number of graphs loaded in memory
+   */
   graph_count: number;
+  /**
+   * The number of SBOMs found in the database
+   */
   sbom_count: number;
 };
 
 export type AncNode = {
+  cpe: Array<Cpe>;
   name: string;
   node_id: string;
-  purl: string;
+  purl: Array<Purl>;
   relationship: string;
   sbom_id: string;
   version: string;
@@ -130,13 +129,14 @@ export type AncNode = {
 
 export type AncestorSummary = {
   ancestors: Array<AncNode>;
+  cpe: Array<Cpe>;
   document_id: string;
   name: string;
   node_id: string;
   product_name: string;
   product_version: string;
   published: string;
-  purl: string;
+  purl: Array<Purl>;
   sbom_id: string;
   version: string;
 };
@@ -162,11 +162,12 @@ export type BinaryByteSize = string;
 
 export type ChatMessage = {
   content: string;
-  internal_state?: string | null;
   message_type: MessageType;
+  timestamp: string;
 };
 
 export type ChatState = {
+  internal_state?: string | null;
   messages: Array<ChatMessage>;
 };
 
@@ -212,6 +213,21 @@ export type CommonImporter = {
   period: string;
 };
 
+export type Conversation = {
+  id: string;
+  messages: Array<ChatMessage>;
+  seq: number;
+  updated_at: string;
+};
+
+export type ConversationSummary = {
+  id: string;
+  summary: string;
+  updated_at: string;
+};
+
+export type Cpe = string;
+
 export type CsafImporter = CommonImporter & {
   fetchRetries?: number | null;
   ignoreMissing?: boolean;
@@ -231,16 +247,18 @@ export type CweImporter = CommonImporter & {
 };
 
 export type DepNode = {
+  cpe: Array<Cpe>;
   deps: Array<DepNode>;
   name: string;
   node_id: string;
-  purl: string;
+  purl: Array<Purl>;
   relationship: string;
   sbom_id: string;
   version: string;
 };
 
 export type DepSummary = {
+  cpe: Array<Cpe>;
   deps: Array<DepNode>;
   document_id: string;
   name: string;
@@ -248,9 +266,14 @@ export type DepSummary = {
   product_name: string;
   product_version: string;
   published: string;
-  purl: string;
+  purl: Array<Purl>;
   sbom_id: string;
   version: string;
+};
+
+export type ExternalReferenceQuery = {
+  cpe?: null | Cpe;
+  purl?: null | Purl;
 };
 
 /**
@@ -455,6 +478,15 @@ export type PaginatedResults_BasePurlSummary = {
   total: number;
 };
 
+export type PaginatedResults_ConversationSummary = {
+  items: Array<{
+    id: string;
+    summary: string;
+    updated_at: string;
+  }>;
+  total: number;
+};
+
 export type PaginatedResults_ImporterReport = {
   items: Array<{
     /**
@@ -634,6 +666,9 @@ export type PurlDetails = PurlHead & {
   advisories: Array<PurlAdvisory>;
   base: BasePurlHead;
   licenses: Array<PurlLicenseSummary>;
+  relationships: {
+    [key: string]: Array<string>;
+  };
   version: VersionedPurlHead;
 };
 
@@ -1100,6 +1135,79 @@ export type CompletionsData = {
 export type CompletionsResponse = ChatState;
 
 export type CompletionsError = unknown;
+
+export type ListConversationsData = {
+  query?: {
+    /**
+     * The maximum number of entries to return.
+     *
+     * Zero means: no limit
+     */
+    limit?: number;
+    /**
+     * The first item to return, skipping all that come before it.
+     *
+     * NOTE: The order of items is defined by the API being called.
+     */
+    offset?: number;
+    q?: string;
+    sort?: string;
+  };
+};
+
+export type ListConversationsResponse = PaginatedResults_ConversationSummary;
+
+export type ListConversationsError = unknown;
+
+export type CreateConversationResponse = Conversation;
+
+export type CreateConversationError = unknown;
+
+export type GetConversationData = {
+  path: {
+    /**
+     * Opaque ID of the conversation
+     */
+    id: string;
+  };
+};
+
+export type GetConversationResponse = Conversation;
+
+export type GetConversationError = unknown;
+
+export type UpdateConversationData = {
+  body: Array<ChatMessage>;
+  headers?: {
+    /**
+     * The revision to update
+     */
+    "if-match"?: string | null;
+  };
+  path: {
+    /**
+     * Opaque ID of the conversation
+     */
+    id: string;
+  };
+};
+
+export type UpdateConversationResponse = Conversation;
+
+export type UpdateConversationError = unknown;
+
+export type DeleteConversationData = {
+  path: {
+    /**
+     * Opaque ID of the conversation
+     */
+    id: string;
+  };
+};
+
+export type DeleteConversationResponse = Conversation;
+
+export type DeleteConversationError = unknown;
 
 export type AiFlagsResponse = AiFlags;
 
@@ -1737,9 +1845,9 @@ export type UploadSbomError = unknown;
 export type ListRelatedSbomsData = {
   query?: {
     /**
-     * Find by an ID of a package
+     * Find by CPE
      */
-    id?: string | null;
+    cpe?: null | Cpe;
     /**
      * The maximum number of entries to return.
      *
@@ -1766,12 +1874,12 @@ export type ListRelatedSbomsResponse = PaginatedResults_SbomSummary;
 export type ListRelatedSbomsError = unknown;
 
 export type CountRelatedSbomsData = {
-  body: Array<AllRelatedQuery>;
+  body: Array<ExternalReferenceQuery>;
   path: {
     /**
-     * Find by an ID of a package
+     * Find by CPE
      */
-    id: string | null;
+    cpe: null | Cpe;
     /**
      * Find by PURL
      */
