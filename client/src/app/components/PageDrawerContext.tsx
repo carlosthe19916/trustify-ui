@@ -104,7 +104,6 @@ export const PageContentWithDrawerProvider: React.FC<
                 {drawerPanelContent}
               </DrawerPanelContent>
             }
-            // className="carlos"
             style={{height: screenSize.height - 110}}
           >
             <DrawerContentBody>{children}</DrawerContentBody>
