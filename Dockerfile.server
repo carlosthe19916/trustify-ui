@@ -22,7 +22,7 @@ RUN sed -i 's/trustify-ui = { git = "https:\/\/github.com\/trustification\/trust
 ######################################################################
 # Build server
 ######################################################################
-FROM registry.access.redhat.com/ubi9/ubi:latest AS server-builder
+FROM registry.access.redhat.com/ubi9/ubi:latest AS server-builder some change here
 
 # Dependencies
 RUN dnf install -y openssl-devel gcc
