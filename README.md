@@ -2,7 +2,7 @@
 
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/trustification/trustify-ui/pulls)
 
-Trustify UI Component
+Trustify UI Component is something else
 
 # Build and Test Status
 
