@@ -1,4 +1,4 @@
-name: Backport merged pull request
+name: Backport
 on:
   pull_request_target:
     types: [ closed ]
