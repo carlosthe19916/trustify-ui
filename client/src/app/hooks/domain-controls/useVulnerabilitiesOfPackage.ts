@@ -1,0 +1,153 @@
+import React from "react";
+
+import { VulnerabilityStatus } from "@app/api/models";
+import { PurlAdvisory, Severity, VulnerabilityHead } from "@app/client";
+import { useFetchPackageById } from "@app/queries/packages";
+
+const areVulnerabilityOfPackageEqual = (
+  a: VulnerabilityOfPackage,
+  b: VulnerabilityOfPackage | FlatVulnerabilityOfPackage
+) => {
+  return (
+    a.vulnerability.identifier === b.vulnerability.identifier &&
+    a.vulnerabilityStatus === b.vulnerabilityStatus
+  );
+};
+
+interface FlatVulnerabilityOfPackage {
+  vulnerability: VulnerabilityHead & { average_severity: Severity };
+  vulnerabilityStatus: VulnerabilityStatus;
+  advisory: PurlAdvisory;
+}
+
+interface VulnerabilityOfPackage {
+  vulnerability: VulnerabilityHead & { average_severity: Severity };
+  vulnerabilityStatus: VulnerabilityStatus;
+  relatedSboms: {
+    advisory: PurlAdvisory;
+  }[];
+}
+
+type SeveritySummary = {
+  total: number;
+  severities: { [key in Severity]: number };
+};
+
+interface VulnerabilityOfPackageSummary {
+  vulnerabilityStatus: {
+    [key in VulnerabilityStatus]: SeveritySummary;
+  };
+}
+
+const DEFAULT_SEVERITY: SeveritySummary = {
+  total: 0,
+  severities: { none: 0, low: 0, medium: 0, high: 0, critical: 0 },
+};
+
+const DEFAULT_SUMMARY: VulnerabilityOfPackageSummary = {
+  vulnerabilityStatus: {
+    affected: { ...DEFAULT_SEVERITY },
+    fixed: { ...DEFAULT_SEVERITY },
+    not_affected: { ...DEFAULT_SEVERITY },
+    known_not_affected: { ...DEFAULT_SEVERITY },
+  },
+};
+
+const advisoryToModels = (advisories: PurlAdvisory[]) => {
+  const vulnerabilities = advisories.flatMap((advisory) => {
+    return (
+      (advisory.status ?? [])
+        .map((pkgStatus) => {
+          const result: FlatVulnerabilityOfPackage = {
+            vulnerability: {
+              ...pkgStatus.vulnerability,
+              average_severity: pkgStatus.average_severity,
+            },
+            vulnerabilityStatus: pkgStatus.status as VulnerabilityStatus,
+            advisory: advisory,
+          };
+          return result;
+        })
+        // group
+        .reduce((prev, current) => {
+          const existingElement = prev.find((item) => {
+            return areVulnerabilityOfPackageEqual(item, current);
+          });
+
+          if (existingElement) {
+            const arrayWithoutExistingItem = prev.filter(
+              (item) => !areVulnerabilityOfPackageEqual(item, existingElement)
+            );
+
+            const updatedItemInArray: VulnerabilityOfPackage = {
+              ...existingElement,
+              relatedSboms: [
+                ...existingElement.relatedSboms,
+                {
+                  advisory: current.advisory,
+                },
+              ],
+            };
+
+            return [...arrayWithoutExistingItem, updatedItemInArray];
+          } else {
+            const newItemInArray: VulnerabilityOfPackage = {
+              vulnerability: current.vulnerability,
+              vulnerabilityStatus: current.vulnerabilityStatus,
+              relatedSboms: [
+                {
+                  advisory: current.advisory,
+                },
+              ],
+            };
+            return [...prev, newItemInArray];
+          }
+        }, [] as VulnerabilityOfPackage[])
+    );
+  });
+
+  const summary = vulnerabilities.reduce((prev, current) => {
+    const vulnStatus = current.vulnerabilityStatus;
+    const severity = current.vulnerability.average_severity;
+
+    const prevVulnStatusValue = prev.vulnerabilityStatus[vulnStatus];
+
+    const result: VulnerabilityOfPackageSummary = {
+      ...prev,
+      vulnerabilityStatus: {
+        ...prev.vulnerabilityStatus,
+        [vulnStatus]: {
+          total: prevVulnStatusValue.total + 1,
+          severities: {
+            ...prevVulnStatusValue.severities,
+            [severity]: prevVulnStatusValue.severities[severity] + 1,
+          },
+        },
+      },
+    };
+    return result;
+  }, DEFAULT_SUMMARY);
+
+  return {
+    vulnerabilities,
+    summary,
+  };
+};
+
+export const useVulnerabilitiesOfPackage = (packageId: string) => {
+  const {
+    pkg,
+    isFetching: isFetchingPackage,
+    fetchError: fetchErrorPackage,
+  } = useFetchPackageById(packageId);
+
+  const result = React.useMemo(() => {
+    return advisoryToModels(pkg?.advisories || []);
+  }, [pkg]);
+
+  return {
+    data: result,
+    isFetching: isFetchingPackage,
+    fetchError: fetchErrorPackage,
+  };
+};

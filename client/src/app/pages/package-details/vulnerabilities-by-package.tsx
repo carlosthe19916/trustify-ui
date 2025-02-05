@@ -1,29 +1,14 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
-import {
-  Button,
-  ButtonVariant,
-  Label,
-  TextContent,
-  Title,
-  Toolbar,
-  ToolbarContent,
-  ToolbarItem,
-} from "@patternfly/react-core";
-import spacing from "@patternfly/react-styles/css/utilities/Spacing/spacing";
+import dayjs from "dayjs";
+
+import { Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 
+import { getSeverityPriority } from "@app/api/model-utils";
 import { VulnerabilityStatus } from "@app/api/models";
-import { client } from "@app/axios-config/apiInit";
-import {
-  getVulnerability,
-  PurlAdvisory,
-  StatusContext,
-  VulnerabilityDetails,
-} from "@app/client";
-import { AdvisoryInDrawerInfo } from "@app/components/AdvisoryInDrawerInfo";
-import { FilterToolbar, FilterType } from "@app/components/FilterToolbar";
-import { PageDrawerContent } from "@app/components/PageDrawerContext";
+import { PurlAdvisory, VulnerabilityDetails } from "@app/client";
 import { SeverityShieldAndText } from "@app/components/SeverityShieldAndText";
 import { SimplePagination } from "@app/components/SimplePagination";
 import {
@@ -31,18 +16,16 @@ import {
   TableHeaderContentWithControls,
   TableRowContentWithControls,
 } from "@app/components/TableControls";
-import { VulnerabilityInDrawerInfo } from "@app/components/VulnerabilityInDrawerInfo";
+import { VulnerabilityDescription } from "@app/components/VulnerabilityDescription";
+import { useVulnerabilitiesOfPackage } from "@app/hooks/domain-controls/useVulnerabilitiesOfPackage";
 import { useLocalTableControls } from "@app/hooks/table-controls";
-import { useFetchPackageById } from "@app/queries/packages";
 import { useWithUiId } from "@app/utils/query-utils";
-
-import { ShowStatusContext } from "../vulnerability-details/packages-by-vulnerability";
+import { formatDate } from "@app/utils/utils";
 
 interface TableData {
   vulnerabilityId: string;
   advisory: PurlAdvisory;
   status: VulnerabilityStatus;
-  context: StatusContext | null;
   vulnerability?: VulnerabilityDetails;
 }
 
@@ -53,154 +36,49 @@ interface VulnerabilitiesByPackageProps {
 export const VulnerabilitiesByPackage: React.FC<
   VulnerabilitiesByPackageProps
 > = ({ packageId }) => {
-  type RowAction = "showVulnerability" | "showAdvisory";
-  const [selectedRowAction, setSelectedRowAction] =
-    React.useState<RowAction | null>(null);
-  const [selectedRow, setSelectedRow] = React.useState<TableData | null>(null);
+  const {
+    data: { vulnerabilities, summary },
+    isFetching: isFetchingVulnerabilities,
+    fetchError: fetchErrorVulnerabilities,
+  } = useVulnerabilitiesOfPackage(packageId);
 
-  const showDrawer = (action: RowAction, row: TableData) => {
-    setSelectedRowAction(action);
-    setSelectedRow(row);
-  };
-
-  //
-  const { pkg, isFetching, fetchError } = useFetchPackageById(packageId);
-
-  const [allVulnerabilities, setAllVulnerabilities] = React.useState<
-    TableData[]
-  >([]);
-  const [vulnerabilitiesById, setVulnerabilitiesById] = React.useState<
-    Map<string, VulnerabilityDetails>
-  >(new Map());
-  const [isFetchingVulnerabilities, setIsFetchingVulnerabilities] =
-    React.useState(false);
-
-  const [allAdvisoryStatus, setAllAdvisoryStatus] = React.useState<
-    Set<VulnerabilityStatus>
-  >(new Set());
-
-  React.useEffect(() => {
-    const vulnerabilities: TableData[] = (pkg?.advisories ?? [])
-      .flatMap((advisory) => {
-        return advisory.status.map(
-          (status) =>
-            ({
-              vulnerabilityId: status.vulnerability.identifier,
-              status: status.status,
-              context: status.context,
-              advisory: advisory,
-            }) as TableData
-        );
-      })
-      // TODO remove this reduce once https://github.com/trustification/trustify/issues/477 is fixed
-      .reduce((prev, current) => {
-        const exists = prev.find(
-          (item) =>
-            item.vulnerabilityId === current.vulnerabilityId &&
-            item.advisory.uuid === current.advisory.uuid
-        );
-        if (!exists) {
-          return [...prev, current];
-        } else {
-          return prev;
-        }
-      }, [] as TableData[]);
-
-    const allUniqueStatus = new Set<VulnerabilityStatus>();
-    vulnerabilities.forEach((item) => allUniqueStatus.add(item.status));
-
-    setAllVulnerabilities(vulnerabilities);
-    setAllAdvisoryStatus(allUniqueStatus);
-    setIsFetchingVulnerabilities(true);
-
-    Promise.all(
-      vulnerabilities
-        .map(
-          async (item) =>
-            (
-              await getVulnerability({
-                client,
-                path: { id: item.vulnerabilityId },
-              })
-            ).data
-        )
-        .map((vulnerability) => vulnerability.catch(() => null))
-    ).then((vulnerabilities) => {
-      const validVulnerabilities = vulnerabilities.reduce((prev, current) => {
-        if (current) {
-          return [...prev, current];
-        } else {
-          // Filter out error responses
-          return prev;
-        }
-      }, [] as VulnerabilityDetails[]);
-
-      const vulnerabilitiesById = new Map<string, VulnerabilityDetails>();
-      validVulnerabilities.forEach((vulnerability) =>
-        vulnerabilitiesById.set(vulnerability.identifier, vulnerability)
-      );
-
-      setVulnerabilitiesById(vulnerabilitiesById);
-      setIsFetchingVulnerabilities(false);
-    });
-  }, [pkg]);
-
-  const tableData = React.useMemo(() => {
-    return allVulnerabilities.map((item) => {
-      const result: TableData = {
-        ...item,
-        vulnerability: vulnerabilitiesById.get(item.vulnerabilityId),
-      };
-      return result;
-    });
-  }, [allVulnerabilities, vulnerabilitiesById]);
+  const affectedVulnerabilities = React.useMemo(() => {
+    return vulnerabilities.filter(
+      (item) => item.vulnerabilityStatus === "affected"
+    );
+  }, [vulnerabilities]);
 
   const tableDataWithUiId = useWithUiId(
-    tableData,
-    (d) => `${d.vulnerabilityId}-${d.advisory.identifier}-${d.advisory.uuid}`
+    affectedVulnerabilities,
+    (d) => `${d.vulnerability.identifier}-${d.vulnerabilityStatus}`
   );
 
   const tableControls = useLocalTableControls({
     tableName: "vulnerability-table",
     idProperty: "_ui_unique_id",
     items: tableDataWithUiId,
-    isLoading: false,
+    isLoading: isFetchingVulnerabilities,
     columnNames: {
-      identifier: "Identifier",
-      title: "Title",
-      severity: "Severity",
-      advisory: "Advisory",
-      context: "Context",
-      status: "Status",
+      identifier: "ID",
+      description: "Description",
+      severity: "CVSS",
+      published: "Date published",
     },
     hasActionsColumn: false,
     isSortEnabled: true,
-    sortableColumns: ["identifier"],
+    sortableColumns: ["identifier", "severity", "published"],
     getSortValues: (item) => ({
-      identifier: item.vulnerabilityId,
+      identifier: item.vulnerability.identifier,
+      severity: item.vulnerability?.average_severity
+        ? getSeverityPriority(item.vulnerability?.average_severity)
+        : 0,
+      published: item.vulnerability?.published
+        ? dayjs(item.vulnerability?.published).valueOf()
+        : 0,
     }),
     isPaginationEnabled: true,
-    isFilterEnabled: true,
-    filterCategories: [
-      {
-        categoryKey: "filterText",
-        title: "Filter text",
-        placeholderText: "Search",
-        type: FilterType.search,
-        getItemValue: (item) => item.vulnerabilityId,
-      },
-      {
-        categoryKey: "status",
-        title: "Status",
-        placeholderText: "Status",
-        type: FilterType.multiselect,
-        selectOptions: Array.from(allAdvisoryStatus).map((item) => ({
-          value: item,
-          label: item.charAt(0).toUpperCase() + item.slice(1).replace("_", " "),
-        })),
-        matcher: (filter: string, item: TableData) => item.status === filter,
-      },
-    ],
+    isFilterEnabled: false,
+    filterCategories: [],
     isExpansionEnabled: false,
   });
 
@@ -224,11 +102,10 @@ export const VulnerabilitiesByPackage: React.FC<
     <>
       <Toolbar {...toolbarProps}>
         <ToolbarContent>
-          <FilterToolbar showFiltersSideBySide {...filterToolbarProps} />
           <ToolbarItem {...paginationToolbarItemProps}>
             <SimplePagination
               idPrefix="vulnerability-table"
-              isTop={true}
+              isTop
               paginationProps={paginationProps}
             />
           </ToolbarItem>
@@ -240,17 +117,15 @@ export const VulnerabilitiesByPackage: React.FC<
           <Tr>
             <TableHeaderContentWithControls {...tableControls}>
               <Th {...getThProps({ columnKey: "identifier" })} />
-              <Th {...getThProps({ columnKey: "title" })} />
+              <Th {...getThProps({ columnKey: "description" })} />
               <Th {...getThProps({ columnKey: "severity" })} />
-              <Th {...getThProps({ columnKey: "advisory" })} />
-              <Th {...getThProps({ columnKey: "context" })} />
-              <Th {...getThProps({ columnKey: "status" })} />
+              <Th {...getThProps({ columnKey: "published" })} />
             </TableHeaderContentWithControls>
           </Tr>
         </Thead>
         <ConditionalTableBody
-          isLoading={isFetching || isFetchingVulnerabilities}
-          isError={!!fetchError}
+          isLoading={isFetchingVulnerabilities}
+          isError={!!fetchErrorVulnerabilities}
           isNoData={tableDataWithUiId.length === 0}
           numRenderedColumns={numRenderedColumns}
         >
@@ -264,22 +139,24 @@ export const VulnerabilitiesByPackage: React.FC<
                     rowIndex={rowIndex}
                   >
                     <Td width={15} {...getTdProps({ columnKey: "identifier" })}>
-                      <Button
-                        size="sm"
-                        variant={ButtonVariant.secondary}
-                        onClick={() => showDrawer("showVulnerability", item)}
+                      <Link
+                        to={`/vulnerabilities/${item.vulnerability.identifier}`}
                       >
-                        {item.vulnerabilityId}
-                      </Button>
+                        {item.vulnerability.identifier}
+                      </Link>
                     </Td>
                     <Td
-                      width={35}
+                      width={60}
                       modifier="truncate"
-                      {...getTdProps({ columnKey: "title" })}
+                      {...getTdProps({ columnKey: "description" })}
                     >
-                      {item.vulnerability?.title}
+                      {item.vulnerability && (
+                        <VulnerabilityDescription
+                          vulnerability={item.vulnerability}
+                        />
+                      )}
                     </Td>
-                    <Td width={10} {...getTdProps({ columnKey: "severity" })}>
+                    <Td width={15} {...getTdProps({ columnKey: "severity" })}>
                       {item.vulnerability?.average_severity && (
                         <SeverityShieldAndText
                           value={item.vulnerability.average_severity}
@@ -287,34 +164,11 @@ export const VulnerabilitiesByPackage: React.FC<
                       )}
                     </Td>
                     <Td
-                      width={15}
-                      modifier="truncate"
-                      {...getTdProps({ columnKey: "advisory" })}
-                    >
-                      <Button
-                        size="sm"
-                        variant={ButtonVariant.secondary}
-                        onClick={() => showDrawer("showAdvisory", item)}
-                      >
-                        {item.advisory.identifier}
-                      </Button>
-                    </Td>
-                    <Td
-                      width={25}
-                      modifier="truncate"
-                      {...getTdProps({ columnKey: "context" })}
-                    >
-                      <ShowStatusContext value={item.context} />
-                    </Td>
-                    <Td
                       width={10}
                       modifier="truncate"
-                      {...getTdProps({ columnKey: "status" })}
+                      {...getTdProps({ columnKey: "published" })}
                     >
-                      <Label>
-                        {item.status.charAt(0).toUpperCase() +
-                          item.status.slice(1).replace("_", " ")}
-                      </Label>
+                      {formatDate(item.vulnerability?.published)}
                     </Td>
                   </TableRowContentWithControls>
                 </Tr>
@@ -329,48 +183,6 @@ export const VulnerabilitiesByPackage: React.FC<
         isCompact
         paginationProps={paginationProps}
       />
-
-      <PageDrawerContent
-        isExpanded={selectedRowAction !== null}
-        onCloseClick={() => setSelectedRowAction(null)}
-        pageKey="drawer"
-        drawerPanelContentProps={{ defaultSize: "600px" }}
-        header={
-          <>
-            {selectedRowAction === "showVulnerability" && (
-              <TextContent>
-                <Title headingLevel="h2" size="lg" className={spacing.mtXs}>
-                  Vulnerability
-                </Title>
-              </TextContent>
-            )}
-            {selectedRowAction === "showAdvisory" && (
-              <TextContent>
-                <Title headingLevel="h2" size="lg" className={spacing.mtXs}>
-                  Advisory
-                </Title>
-              </TextContent>
-            )}
-          </>
-        }
-      >
-        {selectedRowAction === "showVulnerability" && (
-          <>
-            {selectedRow?.advisory && (
-              <VulnerabilityInDrawerInfo
-                vulnerabilityId={selectedRow?.vulnerabilityId}
-              />
-            )}
-          </>
-        )}{" "}
-        {selectedRowAction === "showAdvisory" && (
-          <>
-            {selectedRow?.advisory && (
-              <AdvisoryInDrawerInfo advisoryId={selectedRow?.advisory.uuid} />
-            )}
-          </>
-        )}
-      </PageDrawerContent>
     </>
   );
 };

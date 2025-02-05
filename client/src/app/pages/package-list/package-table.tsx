@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 
-import { SbomsByPackageCount } from "@app/components/SbomsByPackageCount";
+import { PackageQualifiers } from "@app/components/PackageQualifiers";
 import { SimplePagination } from "@app/components/SimplePagination";
 import {
   ConditionalTableBody,
@@ -11,6 +11,7 @@ import {
   TableRowContentWithControls,
 } from "@app/components/TableControls";
 
+import { PackageVulnerabilities } from "./components/PackageVulnerabilities";
 import { PackageSearchContext } from "./package-context";
 
 export const PackageTable: React.FC = () => {
@@ -37,10 +38,12 @@ export const PackageTable: React.FC = () => {
           <Tr>
             <TableHeaderContentWithControls {...tableControls}>
               <Th {...getThProps({ columnKey: "name" })} />
+              <Th {...getThProps({ columnKey: "namespace" })} />
               <Th {...getThProps({ columnKey: "version" })} />
               <Th {...getThProps({ columnKey: "type" })} />
+              <Th {...getThProps({ columnKey: "path" })} />
+              <Th {...getThProps({ columnKey: "qualifiers" })} />
               <Th {...getThProps({ columnKey: "vulnerabilities" })} />
-              <Th {...getThProps({ columnKey: "sboms" })} />
             </TableHeaderContentWithControls>
           </Tr>
         </Thead>
@@ -59,17 +62,22 @@ export const PackageTable: React.FC = () => {
                     item={item}
                     rowIndex={rowIndex}
                   >
-                    <Td width={40} {...getTdProps({ columnKey: "name" })}>
-                      <NavLink
-                        to={`/packages/${encodeURIComponent(item.uuid)}`}
-                      >
+                    <Td width={15} {...getTdProps({ columnKey: "name" })}>
+                      <NavLink to={`/packages/${item.uuid}`}>
                         {item.decomposedPurl
                           ? item.decomposedPurl?.name
                           : item.purl}
                       </NavLink>
                     </Td>
                     <Td
-                      width={20}
+                      width={15}
+                      modifier="truncate"
+                      {...getTdProps({ columnKey: "namespace" })}
+                    >
+                      {item.decomposedPurl?.namespace}
+                    </Td>
+                    <Td
+                      width={10}
                       modifier="truncate"
                       {...getTdProps({ columnKey: "version" })}
                     >
@@ -83,11 +91,24 @@ export const PackageTable: React.FC = () => {
                       {item.decomposedPurl?.type}
                     </Td>
                     <Td
-                      width={15}
+                      width={10}
+                      modifier="truncate"
+                      {...getTdProps({ columnKey: "path" })}
+                    >
+                      {item.decomposedPurl?.path}
+                    </Td>
+                    <Td width={20} {...getTdProps({ columnKey: "qualifiers" })}>
+                      {item.decomposedPurl?.qualifiers && (
+                        <PackageQualifiers
+                          value={item.decomposedPurl?.qualifiers}
+                        />
+                      )}
+                    </Td>
+                    <Td
+                      width={20}
                       {...getTdProps({ columnKey: "vulnerabilities" })}
-                    ></Td>
-                    <Td width={15} {...getTdProps({ columnKey: "sboms" })}>
-                      <SbomsByPackageCount packageId={item.uuid} />
+                    >
+                      <PackageVulnerabilities packageId={item.uuid} />
                     </Td>
                   </TableRowContentWithControls>
                 </Tr>

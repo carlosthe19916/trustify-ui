@@ -6,6 +6,8 @@ import { Bullseye, Spinner } from "@patternfly/react-core";
 import { ErrorFallback } from "./components/ErrorFallback";
 
 const Home = lazy(() => import("./pages/home"));
+const AdvisoryList = lazy(() => import("./pages/advisory-list"));
+const AdvisoryDetails = lazy(() => import("./pages/advisory-details"));
 const VulnerabilityList = lazy(() => import("./pages/vulnerability-list"));
 const VulnerabilityDetails = lazy(
   () => import("./pages/vulnerability-details")
@@ -30,6 +32,11 @@ export enum PathParam {
 export const AppRoutes = () => {
   const allRoutes = useRoutes([
     { path: "/", element: <Home /> },
+    { path: "/advisories", element: <AdvisoryList /> },
+    {
+      path: `/advisories/:${PathParam.ADVISORY_ID}`,
+      element: <AdvisoryDetails />,
+    },
     { path: "/vulnerabilities", element: <VulnerabilityList /> },
     {
       path: `/vulnerabilities/:${PathParam.VULNERABILITY_ID}`,

@@ -29,28 +29,15 @@ import type {
   DownloadAdvisoryData,
   DownloadAdvisoryError,
   DownloadAdvisoryResponse,
-  CompletionsData,
-  CompletionsError,
-  CompletionsResponse,
-  AiFlagsError,
-  AiFlagsResponse,
-  AiToolsError,
-  AiToolsResponse,
-  AiToolCallData,
-  AiToolCallError,
-  AiToolCallResponse,
-  SearchComponentDepsData,
-  SearchComponentDepsError,
-  SearchComponentDepsResponse,
-  GetComponentDepsData,
-  GetComponentDepsError,
-  GetComponentDepsResponse,
-  SearchComponentRootComponentsData,
-  SearchComponentRootComponentsError,
-  SearchComponentRootComponentsResponse,
-  GetComponentRootComponentsData,
-  GetComponentRootComponentsError,
-  GetComponentRootComponentsResponse,
+  SearchComponentData,
+  SearchComponentError,
+  SearchComponentResponse,
+  GetComponentData,
+  GetComponentError,
+  GetComponentResponse,
+  RenderSbomGraphData,
+  RenderSbomGraphError,
+  RenderSbomGraphResponse,
   StatusError,
   StatusResponse,
   UploadDatasetData,
@@ -61,12 +48,12 @@ import type {
   GetImporterData,
   GetImporterError,
   GetImporterResponse,
-  CreateImporterData,
-  CreateImporterError,
-  CreateImporterResponse,
   UpdateImporterData,
   UpdateImporterError,
   UpdateImporterResponse,
+  CreateImporterData,
+  CreateImporterError,
+  CreateImporterResponse,
   DeleteImporterData,
   DeleteImporterError,
   DeleteImporterResponse,
@@ -147,6 +134,9 @@ import type {
   ListRelatedSbomsData,
   ListRelatedSbomsError,
   ListRelatedSbomsResponse,
+  CountRelatedSbomsData,
+  CountRelatedSbomsError,
+  CountRelatedSbomsResponse,
   GetSbomData,
   GetSbomError,
   GetSbomResponse,
@@ -171,6 +161,15 @@ import type {
   DownloadSbomData,
   DownloadSbomError,
   DownloadSbomResponse,
+  GetUserPreferencesData,
+  GetUserPreferencesError,
+  GetUserPreferencesResponse,
+  SetUserPreferencesData,
+  SetUserPreferencesError,
+  SetUserPreferencesResponse,
+  DeleteUserPreferencesData,
+  DeleteUserPreferencesError,
+  DeleteUserPreferencesResponse,
   ListVulnerabilitiesData,
   ListVulnerabilitiesError,
   ListVulnerabilitiesResponse,
@@ -213,7 +212,7 @@ export const listAdvisories = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/advisory",
+    url: "/api/v2/advisory",
   });
 };
 
@@ -229,7 +228,7 @@ export const uploadAdvisory = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/advisory",
+    url: "/api/v2/advisory",
   });
 };
 
@@ -245,7 +244,7 @@ export const updateAdvisoryLabels = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/advisory/{id}/label",
+    url: "/api/v2/advisory/{id}/label",
   });
 };
 
@@ -261,7 +260,7 @@ export const patchAdvisoryLabels = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/advisory/{id}/label",
+    url: "/api/v2/advisory/{id}/label",
   });
 };
 
@@ -277,7 +276,7 @@ export const getAdvisory = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/advisory/{key}",
+    url: "/api/v2/advisory/{key}",
   });
 };
 
@@ -293,7 +292,7 @@ export const deleteAdvisory = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/advisory/{key}",
+    url: "/api/v2/advisory/{key}",
   });
 };
 
@@ -309,115 +308,46 @@ export const downloadAdvisory = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/advisory/{key}/download",
+    url: "/api/v2/advisory/{key}/download",
   });
 };
 
-export const completions = <ThrowOnError extends boolean = false>(
-  options: Options<CompletionsData, ThrowOnError>
-) => {
-  return (options?.client ?? client).post<
-    CompletionsResponse,
-    CompletionsError,
-    ThrowOnError
-  >({
-    ...options,
-    url: "/api/v1/ai/completions",
-  });
-};
-
-export const aiFlags = <ThrowOnError extends boolean = false>(
-  options?: Options<unknown, ThrowOnError>
+export const searchComponent = <ThrowOnError extends boolean = false>(
+  options?: Options<SearchComponentData, ThrowOnError>
 ) => {
   return (options?.client ?? client).get<
-    AiFlagsResponse,
-    AiFlagsError,
+    SearchComponentResponse,
+    SearchComponentError,
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/ai/flags",
+    url: "/api/v2/analysis/component",
   });
 };
 
-export const aiTools = <ThrowOnError extends boolean = false>(
-  options?: Options<unknown, ThrowOnError>
+export const getComponent = <ThrowOnError extends boolean = false>(
+  options: Options<GetComponentData, ThrowOnError>
 ) => {
   return (options?.client ?? client).get<
-    AiToolsResponse,
-    AiToolsError,
+    GetComponentResponse,
+    GetComponentError,
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/ai/tools",
+    url: "/api/v2/analysis/component/{key}",
   });
 };
 
-export const aiToolCall = <ThrowOnError extends boolean = false>(
-  options: Options<AiToolCallData, ThrowOnError>
-) => {
-  return (options?.client ?? client).post<
-    AiToolCallResponse,
-    AiToolCallError,
-    ThrowOnError
-  >({
-    ...options,
-    url: "/api/v1/ai/tools/{name}",
-  });
-};
-
-export const searchComponentDeps = <ThrowOnError extends boolean = false>(
-  options?: Options<SearchComponentDepsData, ThrowOnError>
+export const renderSbomGraph = <ThrowOnError extends boolean = false>(
+  options: Options<RenderSbomGraphData, ThrowOnError>
 ) => {
   return (options?.client ?? client).get<
-    SearchComponentDepsResponse,
-    SearchComponentDepsError,
+    RenderSbomGraphResponse,
+    RenderSbomGraphError,
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/analysis/dep",
-  });
-};
-
-export const getComponentDeps = <ThrowOnError extends boolean = false>(
-  options: Options<GetComponentDepsData, ThrowOnError>
-) => {
-  return (options?.client ?? client).get<
-    GetComponentDepsResponse,
-    GetComponentDepsError,
-    ThrowOnError
-  >({
-    ...options,
-    url: "/api/v1/analysis/dep/{key}",
-  });
-};
-
-export const searchComponentRootComponents = <
-  ThrowOnError extends boolean = false,
->(
-  options?: Options<SearchComponentRootComponentsData, ThrowOnError>
-) => {
-  return (options?.client ?? client).get<
-    SearchComponentRootComponentsResponse,
-    SearchComponentRootComponentsError,
-    ThrowOnError
-  >({
-    ...options,
-    url: "/api/v1/analysis/root-component",
-  });
-};
-
-export const getComponentRootComponents = <
-  ThrowOnError extends boolean = false,
->(
-  options: Options<GetComponentRootComponentsData, ThrowOnError>
-) => {
-  return (options?.client ?? client).get<
-    GetComponentRootComponentsResponse,
-    GetComponentRootComponentsError,
-    ThrowOnError
-  >({
-    ...options,
-    url: "/api/v1/analysis/root-component/{key}",
+    url: "/api/v2/analysis/sbom/{sbom}/render",
   });
 };
 
@@ -430,7 +360,7 @@ export const status = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/analysis/status",
+    url: "/api/v2/analysis/status",
   });
 };
 
@@ -446,7 +376,7 @@ export const uploadDataset = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/dataset",
+    url: "/api/v2/dataset",
   });
 };
 
@@ -462,7 +392,7 @@ export const listImporters = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/importer",
+    url: "/api/v2/importer",
   });
 };
 
@@ -478,23 +408,7 @@ export const getImporter = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/importer/{name}",
-  });
-};
-
-/**
- * Create a new importer configuration
- */
-export const createImporter = <ThrowOnError extends boolean = false>(
-  options: Options<CreateImporterData, ThrowOnError>
-) => {
-  return (options?.client ?? client).post<
-    CreateImporterResponse,
-    CreateImporterError,
-    ThrowOnError
-  >({
-    ...options,
-    url: "/api/v1/importer/{name}",
+    url: "/api/v2/importer/{name}",
   });
 };
 
@@ -510,7 +424,23 @@ export const updateImporter = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/importer/{name}",
+    url: "/api/v2/importer/{name}",
+  });
+};
+
+/**
+ * Create a new importer configuration
+ */
+export const createImporter = <ThrowOnError extends boolean = false>(
+  options: Options<CreateImporterData, ThrowOnError>
+) => {
+  return (options?.client ?? client).post<
+    CreateImporterResponse,
+    CreateImporterError,
+    ThrowOnError
+  >({
+    ...options,
+    url: "/api/v2/importer/{name}",
   });
 };
 
@@ -526,7 +456,7 @@ export const deleteImporter = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/importer/{name}",
+    url: "/api/v2/importer/{name}",
   });
 };
 
@@ -542,7 +472,7 @@ export const patchImporter = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/importer/{name}",
+    url: "/api/v2/importer/{name}",
   });
 };
 
@@ -558,7 +488,7 @@ export const enableImporter = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/importer/{name}/enabled",
+    url: "/api/v2/importer/{name}/enabled",
   });
 };
 
@@ -574,7 +504,7 @@ export const forceRunImporter = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/importer/{name}/force",
+    url: "/api/v2/importer/{name}/force",
   });
 };
 
@@ -590,7 +520,7 @@ export const listImporterReports = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/importer/{name}/report",
+    url: "/api/v2/importer/{name}/report",
   });
 };
 
@@ -606,7 +536,7 @@ export const listLicenses = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/license",
+    url: "/api/v2/license",
   });
 };
 
@@ -622,7 +552,7 @@ export const listSpdxLicenses = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/license/spdx/license",
+    url: "/api/v2/license/spdx/license",
   });
 };
 
@@ -638,7 +568,7 @@ export const getSpdxLicense = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/license/spdx/license/{id}",
+    url: "/api/v2/license/spdx/license/{id}",
   });
 };
 
@@ -654,7 +584,7 @@ export const getLicenses = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/license/{uuid}",
+    url: "/api/v2/license/{uuid}",
   });
 };
 
@@ -670,7 +600,7 @@ export const getLicensePurls = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/license/{uuid}/purl",
+    url: "/api/v2/license/{uuid}/purl",
   });
 };
 
@@ -686,7 +616,7 @@ export const listOrganizations = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/organization",
+    url: "/api/v2/organization",
   });
 };
 
@@ -702,7 +632,7 @@ export const getOrganization = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/organization/{id}",
+    url: "/api/v2/organization/{id}",
   });
 };
 
@@ -715,7 +645,7 @@ export const listProducts = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/product",
+    url: "/api/v2/product",
   });
 };
 
@@ -728,7 +658,7 @@ export const getProduct = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/product/{id}",
+    url: "/api/v2/product/{id}",
   });
 };
 
@@ -741,7 +671,7 @@ export const deleteProduct = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/product/{id}",
+    url: "/api/v2/product/{id}",
   });
 };
 
@@ -757,7 +687,7 @@ export const listPurl = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/purl",
+    url: "/api/v2/purl",
   });
 };
 
@@ -773,7 +703,7 @@ export const listBasePurls = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/purl/base",
+    url: "/api/v2/purl/base",
   });
 };
 
@@ -789,7 +719,7 @@ export const getBasePurl = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/purl/base/{key}",
+    url: "/api/v2/purl/base/{key}",
   });
 };
 
@@ -805,7 +735,7 @@ export const listPurlTypes = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/purl/type",
+    url: "/api/v2/purl/type",
   });
 };
 
@@ -821,7 +751,7 @@ export const getPurlType = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/purl/type/{type}",
+    url: "/api/v2/purl/type/{type}",
   });
 };
 
@@ -837,7 +767,7 @@ export const getBasePurlOfType = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/purl/type/{type}/{namespace_and_name}",
+    url: "/api/v2/purl/type/{type}/{namespace_and_name}",
   });
 };
 
@@ -853,7 +783,7 @@ export const getVersionedPurlOfType = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/purl/type/{type}/{namespace_and_name}@{version}",
+    url: "/api/v2/purl/type/{type}/{namespace_and_name}@{version}",
   });
 };
 
@@ -869,7 +799,7 @@ export const getVersionedPurl = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/purl/version/{key}",
+    url: "/api/v2/purl/version/{key}",
   });
 };
 
@@ -885,7 +815,7 @@ export const getPurl = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/purl/{key}",
+    url: "/api/v2/purl/{key}",
   });
 };
 
@@ -898,7 +828,7 @@ export const listSboms = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/sbom",
+    url: "/api/v2/sbom",
   });
 };
 
@@ -914,7 +844,7 @@ export const uploadSbom = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/sbom",
+    url: "/api/v2/sbom",
   });
 };
 
@@ -932,7 +862,25 @@ export const listRelatedSboms = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/sbom/by-package",
+    url: "/api/v2/sbom/by-package",
+  });
+};
+
+/**
+ * Count all SBOMs containing the provided packages.
+ * The packages can be provided either via a PURL or using the ID of a package as returned by
+ * other APIs, but not both.
+ */
+export const countRelatedSboms = <ThrowOnError extends boolean = false>(
+  options: Options<CountRelatedSbomsData, ThrowOnError>
+) => {
+  return (options?.client ?? client).get<
+    CountRelatedSbomsResponse,
+    CountRelatedSbomsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: "/api/v2/sbom/count-by-package",
   });
 };
 
@@ -945,7 +893,7 @@ export const getSbom = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/sbom/{id}",
+    url: "/api/v2/sbom/{id}",
   });
 };
 
@@ -958,7 +906,7 @@ export const deleteSbom = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/sbom/{id}",
+    url: "/api/v2/sbom/{id}",
   });
 };
 
@@ -971,7 +919,7 @@ export const getSbomAdvisories = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/sbom/{id}/advisory",
+    url: "/api/v2/sbom/{id}/advisory",
   });
 };
 
@@ -987,7 +935,7 @@ export const updateSbomLabels = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/sbom/{id}/label",
+    url: "/api/v2/sbom/{id}/label",
   });
 };
 
@@ -1003,7 +951,7 @@ export const patchSbomLabels = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/sbom/{id}/label",
+    url: "/api/v2/sbom/{id}/label",
   });
 };
 
@@ -1019,7 +967,7 @@ export const listPackages = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/sbom/{id}/packages",
+    url: "/api/v2/sbom/{id}/packages",
   });
 };
 
@@ -1035,7 +983,7 @@ export const listRelatedPackages = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/sbom/{id}/related",
+    url: "/api/v2/sbom/{id}/related",
   });
 };
 
@@ -1048,7 +996,55 @@ export const downloadSbom = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/sbom/{key}/download",
+    url: "/api/v2/sbom/{key}/download",
+  });
+};
+
+/**
+ * Get user preferences
+ */
+export const getUserPreferences = <ThrowOnError extends boolean = false>(
+  options: Options<GetUserPreferencesData, ThrowOnError>
+) => {
+  return (options?.client ?? client).get<
+    GetUserPreferencesResponse,
+    GetUserPreferencesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: "/api/v2/userPreference/{key}",
+  });
+};
+
+/**
+ * Set user preferences
+ */
+export const setUserPreferences = <ThrowOnError extends boolean = false>(
+  options: Options<SetUserPreferencesData, ThrowOnError>
+) => {
+  return (options?.client ?? client).put<
+    SetUserPreferencesResponse,
+    SetUserPreferencesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: "/api/v2/userPreference/{key}",
+  });
+};
+
+/**
+ * Delete user preferences
+ */
+export const deleteUserPreferences = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteUserPreferencesData, ThrowOnError>
+) => {
+  return (options?.client ?? client).delete<
+    DeleteUserPreferencesResponse,
+    DeleteUserPreferencesError,
+    ThrowOnError
+  >({
+    ...options,
+    url: "/api/v2/userPreference/{key}",
   });
 };
 
@@ -1064,7 +1060,7 @@ export const listVulnerabilities = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/vulnerability",
+    url: "/api/v2/vulnerability",
   });
 };
 
@@ -1080,7 +1076,7 @@ export const getVulnerability = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/vulnerability/{id}",
+    url: "/api/v2/vulnerability/{id}",
   });
 };
 
@@ -1096,7 +1092,7 @@ export const deleteVulnerability = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/vulnerability/{id}",
+    url: "/api/v2/vulnerability/{id}",
   });
 };
 
@@ -1112,7 +1108,7 @@ export const listWeaknesses = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/weakness",
+    url: "/api/v2/weakness",
   });
 };
 
@@ -1128,6 +1124,6 @@ export const getWeakness = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...options,
-    url: "/api/v1/weakness/{id}",
+    url: "/api/v2/weakness/{id}",
   });
 };

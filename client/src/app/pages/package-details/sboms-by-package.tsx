@@ -1,23 +1,11 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
-import {
-  Button,
-  ButtonVariant,
-  TextContent,
-  Title,
-  Toolbar,
-  ToolbarContent,
-  ToolbarItem,
-} from "@patternfly/react-core";
-import spacing from "@patternfly/react-styles/css/utilities/Spacing/spacing";
+import { Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 
 import { TablePersistenceKeyPrefixes } from "@app/Constants";
-import { SbomSummary } from "@app/client";
-import { FilterToolbar, FilterType } from "@app/components/FilterToolbar";
-import { LabelsAsList } from "@app/components/LabelsAsList";
-import { PageDrawerContent } from "@app/components/PageDrawerContext";
-import { SbomInDrawerInfo } from "@app/components/SbomInDrawerInfo";
+import { FilterType } from "@app/components/FilterToolbar";
 import { SimplePagination } from "@app/components/SimplePagination";
 import {
   ConditionalTableBody,
@@ -30,35 +18,19 @@ import {
 } from "@app/hooks/table-controls";
 import { useSelectionState } from "@app/hooks/useSelectionState";
 import { useFetchSbomsByPackageId } from "@app/queries/sboms";
-import { formatDate } from "@app/utils/utils";
 
 interface SbomsByPackageProps {
-  packageId: string;
+  purl: string;
 }
 
-export const SbomsByPackage: React.FC<SbomsByPackageProps> = ({
-  packageId,
-}) => {
-  type RowAction = "showSbom";
-  const [selectedRowAction, setSelectedRowAction] =
-    React.useState<RowAction | null>(null);
-  const [selectedRow, setSelectedRow] = React.useState<SbomSummary | null>(
-    null
-  );
-
-  const showDrawer = (action: RowAction, row: SbomSummary) => {
-    setSelectedRowAction(action);
-    setSelectedRow(row);
-  };
-
-  //
+export const SbomsByPackage: React.FC<SbomsByPackageProps> = ({ purl }) => {
   const tableControlState = useTableControlState({
     tableName: "sboms",
     persistenceKeyPrefix: TablePersistenceKeyPrefixes.sboms_by_package,
     columnNames: {
       name: "Name",
-      published: "Published",
-      labels: "Labels",
+      version: "Version",
+      supplier: "Supplier",
     },
     isPaginationEnabled: true,
     isSortEnabled: true,
@@ -79,7 +51,7 @@ export const SbomsByPackage: React.FC<SbomsByPackageProps> = ({
     isFetching,
     fetchError,
   } = useFetchSbomsByPackageId(
-    packageId,
+    purl,
     getHubRequestParams({
       ...tableControlState,
       hubSortFieldKeys: {},
@@ -117,7 +89,6 @@ export const SbomsByPackage: React.FC<SbomsByPackageProps> = ({
     <>
       <Toolbar {...toolbarProps}>
         <ToolbarContent>
-          <FilterToolbar showFiltersSideBySide {...filterToolbarProps} />
           <ToolbarItem {...paginationToolbarItemProps}>
             <SimplePagination
               idPrefix="sbom-table"
@@ -133,8 +104,8 @@ export const SbomsByPackage: React.FC<SbomsByPackageProps> = ({
           <Tr>
             <TableHeaderContentWithControls {...tableControls}>
               <Th {...getThProps({ columnKey: "name" })} />
-              <Th {...getThProps({ columnKey: "published" })} />
-              <Th {...getThProps({ columnKey: "labels" })} />
+              <Th {...getThProps({ columnKey: "version" })} />
+              <Th {...getThProps({ columnKey: "supplier" })} />
             </TableHeaderContentWithControls>
           </Tr>
         </Thead>
@@ -149,27 +120,21 @@ export const SbomsByPackage: React.FC<SbomsByPackageProps> = ({
               <Tbody key={item.id}>
                 <Tr {...getTrProps({ item })}>
                   <Td width={35} {...getTdProps({ columnKey: "name" })}>
-                    <Button
-                      size="sm"
-                      variant={ButtonVariant.secondary}
-                      onClick={() => showDrawer("showSbom", item)}
-                    >
-                      {item.name}
-                    </Button>
+                    <Link to={`/sboms/${item.id}`}>{item.name}</Link>
                   </Td>
                   <Td
-                    width={10}
+                    width={15}
                     modifier="truncate"
-                    {...getTdProps({ columnKey: "published" })}
+                    {...getTdProps({ columnKey: "version" })}
                   >
-                    {formatDate(item.published)}
+                    {item.described_by.map((item) => item.version).join(", ")}
                   </Td>
                   <Td
-                    width={35}
+                    width={50}
                     modifier="truncate"
-                    {...getTdProps({ columnKey: "labels" })}
+                    {...getTdProps({ columnKey: "supplier" })}
                   >
-                    {item.labels && <LabelsAsList value={item.labels} />}
+                    {item.authors.join(", ")}
                   </Td>
                 </Tr>
               </Tbody>
@@ -178,33 +143,11 @@ export const SbomsByPackage: React.FC<SbomsByPackageProps> = ({
         </ConditionalTableBody>
       </Table>
       <SimplePagination
-        idPrefix="sboms-table"
+        idPrefix="sbom-table"
         isTop={false}
         isCompact
         paginationProps={paginationProps}
       />
-
-      <PageDrawerContent
-        isExpanded={selectedRowAction !== null}
-        onCloseClick={() => setSelectedRowAction(null)}
-        pageKey="drawer"
-        drawerPanelContentProps={{ defaultSize: "600px" }}
-        header={
-          <>
-            {selectedRowAction === "showSbom" && (
-              <TextContent>
-                <Title headingLevel="h2" size="lg" className={spacing.mtXs}>
-                  Advisory
-                </Title>
-              </TextContent>
-            )}
-          </>
-        }
-      >
-        {selectedRowAction === "showSbom" && (
-          <>{selectedRow && <SbomInDrawerInfo sbomId={selectedRow.id} />}</>
-        )}
-      </PageDrawerContent>
     </>
   );
 };

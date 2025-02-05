@@ -1,9 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 
-import { AxiosError } from "axios";
-
-import { ButtonVariant } from "@patternfly/react-core";
 import {
   ActionsColumn,
   Table,
@@ -14,59 +11,21 @@ import {
   Tr,
 } from "@patternfly/react-table";
 
-import { SbomSummary } from "@app/client";
-import { NotificationsContext } from "@app/components/NotificationsContext";
-import { PackagesCount } from "@app/components/PackagesCount";
 import { SimplePagination } from "@app/components/SimplePagination";
 import {
   ConditionalTableBody,
   TableHeaderContentWithControls,
   TableRowContentWithControls,
 } from "@app/components/TableControls";
-import { useDownload } from "@app/hooks/useDownload";
-import { useDeleteSbomMutation } from "@app/queries/sboms";
+import { useDownload } from "@app/hooks/domain-controls/useDownload";
 import { formatDate } from "@app/utils/utils";
 
-import { ConfirmDialog } from "@app/components/ConfirmDialog";
+import { SBOMVulnerabilities } from "./components/SbomVulnerabilities";
 import { SbomSearchContext } from "./sbom-context";
 
 export const SbomTable: React.FC = ({}) => {
   const { isFetching, fetchError, totalItemCount, tableControls } =
     React.useContext(SbomSearchContext);
-
-  const { pushNotification } = React.useContext(NotificationsContext);
-
-  // Actions that each row can trigger
-  type RowAction = "delete";
-  const [selectedRowAction, setSelectedRowAction] =
-    React.useState<RowAction | null>(null);
-  const [selectedRow, setSelectedRow] = React.useState<SbomSummary | null>(
-    null
-  );
-
-  const prepareActionOnRow = (action: RowAction, row: SbomSummary) => {
-    setSelectedRowAction(action);
-    setSelectedRow(row);
-  };
-
-  const onDeleteSbomSuccess = (sbom: SbomSummary) => {
-    pushNotification({
-      title: `The SBOM ${sbom.name} was deleted`,
-      variant: "success",
-    });
-  };
-
-  const onDeleteAdvisoryError = (_error: AxiosError) => {
-    pushNotification({
-      title: "Error occurred while deleting the SBOM",
-      variant: "danger",
-    });
-  };
-
-  const { mutate: deleteSbom } = useDeleteSbomMutation(
-    onDeleteSbomSuccess,
-    onDeleteAdvisoryError
-  );
 
   const {
     numRenderedColumns,
@@ -114,7 +73,7 @@ export const SbomTable: React.FC = ({}) => {
                     rowIndex={rowIndex}
                   >
                     <Td
-                      width={30}
+                      width={25}
                       {...getTdProps({
                         columnKey: "name",
                         isCompoundExpandToggle: true,
@@ -145,12 +104,14 @@ export const SbomTable: React.FC = ({}) => {
                       {formatDate(item.published)}
                     </Td>
                     <Td width={10} {...getTdProps({ columnKey: "packages" })}>
-                      <PackagesCount sbomId={item.id} />
+                      {item.number_of_packages}
                     </Td>
                     <Td
-                      width={15}
+                      width={20}
                       {...getTdProps({ columnKey: "vulnerabilities" })}
-                    ></Td>
+                    >
+                      <SBOMVulnerabilities sbomId={item.id} />
+                    </Td>
                     <Td isActionCell>
                       <ActionsColumn
                         items={[
@@ -159,10 +120,6 @@ export const SbomTable: React.FC = ({}) => {
                             onClick: () => {
                               downloadSBOM(item.id, `${item.name}.json`);
                             },
-                          },
-                          {
-                            title: "Delete",
-                            onClick: () => prepareActionOnRow("delete", item),
                           },
                         ]}
                       />
@@ -179,25 +136,6 @@ export const SbomTable: React.FC = ({}) => {
         isTop={false}
         isCompact
         paginationProps={paginationProps}
-      />
-
-      <ConfirmDialog
-        title={`Delete ${selectedRow?.name}`}
-        titleIconVariant="warning"
-        isOpen={selectedRowAction === "delete"}
-        message="Are you sure you want to delete this SBOM? This action cannot be undone."
-        aria-label="Delete SBOM"
-        confirmBtnVariant={ButtonVariant.danger}
-        confirmBtnLabel="Delete"
-        cancelBtnLabel="Cancel"
-        onCancel={() => setSelectedRowAction(null)}
-        onClose={() => setSelectedRowAction(null)}
-        onConfirm={() => {
-          if (selectedRow) {
-            deleteSbom(selectedRow.id);
-          }
-          setSelectedRowAction(null);
-        }}
       />
     </>
   );

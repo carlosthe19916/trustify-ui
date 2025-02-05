@@ -5,7 +5,10 @@ import { AxiosError } from "axios";
 import { DecomposedPurl } from "@app/api/models";
 import { PurlSummary } from "@app/client";
 import { FilterType } from "@app/components/FilterToolbar";
-import { TablePersistenceKeyPrefixes } from "@app/Constants";
+import {
+  FILTER_TEXT_CATEGORY_KEY,
+  TablePersistenceKeyPrefixes,
+} from "@app/Constants";
 import {
   getHubRequestParams,
   ITableControls,
@@ -23,9 +26,15 @@ interface PackageTableData extends PurlSummary {
 interface IPackageSearchContext {
   tableControls: ITableControls<
     PackageTableData,
-    "name" | "version" | "type" | "vulnerabilities" | "sboms",
-    never,
-    "" | "type",
+    | "name"
+    | "namespace"
+    | "version"
+    | "type"
+    | "path"
+    | "qualifiers"
+    | "vulnerabilities",
+    "name" | "namespace" | "version",
+    "" | "type" | "arch",
     string
   >;
 
@@ -49,20 +58,23 @@ export const PackageSearchProvider: React.FunctionComponent<
   const tableControlState = useTableControlState({
     tableName: "packages",
     persistenceKeyPrefix: TablePersistenceKeyPrefixes.packages,
+    persistTo: "urlParams",
     columnNames: {
       name: "Name",
+      namespace: "Namespace",
       version: "Version",
       type: "Type",
+      path: "Path",
+      qualifiers: "Qualifiers",
       vulnerabilities: "Vulnerabilities",
-      sboms: "SBOMs",
     },
     isPaginationEnabled: true,
     isSortEnabled: true,
-    sortableColumns: [],
+    sortableColumns: ["name", "namespace", "version"],
     isFilterEnabled: true,
     filterCategories: [
       {
-        categoryKey: "",
+        categoryKey: FILTER_TEXT_CATEGORY_KEY,
         title: "Filter text",
         placeholderText: "Search",
         type: FilterType.search,
@@ -76,6 +88,20 @@ export const PackageSearchProvider: React.FunctionComponent<
           { value: "maven", label: "Maven" },
           { value: "rpm", label: "RPM" },
           { value: "npm", label: "NPM" },
+          { value: "oci", label: "OCI" },
+        ],
+      },
+      {
+        categoryKey: "arch",
+        title: "Architecture",
+        placeholderText: "Architecture",
+        type: FilterType.multiselect,
+        selectOptions: [
+          { value: "x86_64", label: "AMD 64bit" },
+          { value: "aarch64", label: "ARM 64bit" },
+          { value: "ppc64le", label: "PowerPC" },
+          { value: "s390x", label: "S390" },
+          { value: "noarch", label: "No Arch" },
         ],
       },
     ],
@@ -89,7 +115,11 @@ export const PackageSearchProvider: React.FunctionComponent<
   } = useFetchPackages(
     getHubRequestParams({
       ...tableControlState,
-      hubSortFieldKeys: {},
+      hubSortFieldKeys: {
+        name: "name",
+        namespace: "namespace",
+        version: "version",
+      },
     })
   );
 

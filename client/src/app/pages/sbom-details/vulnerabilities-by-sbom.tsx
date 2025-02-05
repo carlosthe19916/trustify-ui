@@ -1,7 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-import { ChartDonut } from "@patternfly/react-charts";
+import dayjs from "dayjs";
+
 import {
   Card,
   CardBody,
@@ -27,18 +28,17 @@ import {
   Tr,
 } from "@patternfly/react-table";
 
-import { compareBySeverityFn, severityList } from "@app/api/model-utils";
+import { getSeverityPriority } from "@app/api/model-utils";
 import { VulnerabilityStatus } from "@app/api/models";
-import { client } from "@app/axios-config/apiInit";
 import {
-  getVulnerability,
+  PurlSummary,
   SbomAdvisory,
   SbomPackage,
-  Severity,
-  VulnerabilityDetails,
+  SbomStatus,
 } from "@app/client";
 import { LoadingWrapper } from "@app/components/LoadingWrapper";
 import { PackageQualifiers } from "@app/components/PackageQualifiers";
+import { SbomVulnerabilitiesDonutChart } from "@app/components/SbomVulnerabilitiesDonutChart";
 import { SeverityShieldAndText } from "@app/components/SeverityShieldAndText";
 import { SimplePagination } from "@app/components/SimplePagination";
 import {
@@ -46,27 +46,24 @@ import {
   TableHeaderContentWithControls,
   TableRowContentWithControls,
 } from "@app/components/TableControls";
+import { VulnerabilityDescription } from "@app/components/VulnerabilityDescription";
+import { useVulnerabilitiesOfSbom } from "@app/hooks/domain-controls/useVulnerabilitiesOfSbom";
 import { useLocalTableControls } from "@app/hooks/table-controls";
-import { useFetchSBOMById, useFetchSbomsAdvisory } from "@app/queries/sboms";
+import { useFetchSBOMById } from "@app/queries/sboms";
 import { useWithUiId } from "@app/utils/query-utils";
 import { decomposePurl, formatDate } from "@app/utils/utils";
 
-interface DonutChartData {
-  total: number;
-  summary: { [key in Severity]: number };
-}
-
-const DEFAULT_DONUT_CHART_DATA: DonutChartData = {
-  total: 0,
-  summary: { none: 0, low: 0, medium: 0, high: 0, critical: 0 },
-};
-
 interface TableData {
-  vulnerabilityId: string;
-  advisory: SbomAdvisory;
-  status: VulnerabilityStatus;
-  packages: SbomPackage[];
-  vulnerability?: VulnerabilityDetails;
+  vulnerability: SbomStatus;
+  vulnerabilityStatus: VulnerabilityStatus;
+  relatedPackages: {
+    advisory: SbomAdvisory;
+    packages: SbomPackage[];
+  }[];
+  summary: {
+    totalPackages: number;
+    allPackages: SbomPackage[];
+  };
 }
 
 interface VulnerabilitiesBySbomProps {
@@ -82,106 +79,42 @@ export const VulnerabilitiesBySbom: React.FC<VulnerabilitiesBySbomProps> = ({
     fetchError: fetchErrorSbom,
   } = useFetchSBOMById(sbomId);
   const {
-    advisories,
-    isFetching: isFetchingAdvisories,
-    fetchError: fetchErrorAdvisories,
-  } = useFetchSbomsAdvisory(sbomId);
+    data: { vulnerabilities, summary: vulnerabilitiesSummary },
+    isFetching: isFetchingVulnerabilities,
+    fetchError: fetchErrorVulnerabilities,
+  } = useVulnerabilitiesOfSbom(sbomId);
 
-  const [allVulnerabilities, setAllVulnerabilities] = React.useState<
-    TableData[]
-  >([]);
-  const [vulnerabilitiesById, setVulnerabilitiesById] = React.useState<
-    Map<string, VulnerabilityDetails>
-  >(new Map());
-  const [isFetchingVulnerabilities, setIsFetchingVulnerabilities] =
-    React.useState(false);
-
-  React.useEffect(() => {
-    if (advisories.length === 0) {
-      return;
-    }
-
-    const vulnerabilities = (advisories ?? [])
-      .flatMap((advisory) => {
-        return (advisory.status ?? []).map((status) => {
-          const result: TableData = {
-            vulnerabilityId: status.vulnerability_id,
-            status: status.status as VulnerabilityStatus,
-            packages: status.packages || [],
-            advisory: { ...advisory },
-          };
-          return result;
-        });
-      })
-      // Take only "affected"
-      .filter((item) => item.status === "affected")
-      // Remove dupplicates if exists
-      .reduce((prev, current) => {
-        const exists = prev.find(
-          (item) =>
-            item.vulnerabilityId === current.vulnerabilityId &&
-            item.advisory.uuid === current.advisory.uuid
-        );
-        if (!exists) {
-          return [...prev, current];
-        } else {
-          return prev;
-        }
-      }, [] as TableData[]);
-
-    setAllVulnerabilities(vulnerabilities);
-    setIsFetchingVulnerabilities(true);
-
-    Promise.all(
-      vulnerabilities
-        .map(async (item) => {
-          const response = await getVulnerability({
-            client,
-            path: { id: item.vulnerabilityId },
-          });
-          return response.data;
-        })
-        .map((vulnerability) => vulnerability.catch(() => null))
-    ).then((vulnerabilities) => {
-      const validVulnerabilities = vulnerabilities.reduce((prev, current) => {
-        if (current) {
-          return [...prev, current];
-        } else {
-          // Filter out error responses
-          return prev;
-        }
-      }, [] as VulnerabilityDetails[]);
-
-      const vulnerabilitiesById = new Map<string, VulnerabilityDetails>();
-      validVulnerabilities.forEach((vulnerability) => {
-        vulnerabilitiesById.set(vulnerability.identifier, vulnerability);
-      });
-
-      setVulnerabilitiesById(vulnerabilitiesById);
-      setIsFetchingVulnerabilities(false);
-    });
-  }, [advisories]);
+  const affectedVulnerabilities = React.useMemo(() => {
+    return vulnerabilities.filter(
+      (item) => item.vulnerabilityStatus === "affected"
+    );
+  }, [vulnerabilities]);
 
   const tableData = React.useMemo(() => {
-    return allVulnerabilities.map((item) => {
+    return affectedVulnerabilities.map((item) => {
+      const allPackages = item.relatedPackages.flatMap((i) => i.packages);
       const result: TableData = {
         ...item,
-        vulnerability: vulnerabilitiesById.get(item.vulnerabilityId),
+        summary: {
+          totalPackages: allPackages.length,
+          allPackages,
+        },
       };
+
       return result;
     });
-  }, [allVulnerabilities, vulnerabilitiesById]);
+  }, [affectedVulnerabilities]);
 
   const tableDataWithUiId = useWithUiId(
     tableData,
-    (d) => `${d.vulnerabilityId}-${d.advisory.identifier}-${d.advisory.uuid}`
+    (d) => `${d.vulnerability.identifier}-${d.vulnerabilityStatus}`
   );
 
   const tableControls = useLocalTableControls({
     tableName: "vulnerability-table",
     idProperty: "_ui_unique_id",
     items: tableDataWithUiId,
-    isLoading: isFetchingAdvisories || isFetchingVulnerabilities,
+    isLoading: isFetchingVulnerabilities,
     columnNames: {
       id: "Id",
       description: "Description",
@@ -192,7 +125,24 @@ export const VulnerabilitiesBySbom: React.FC<VulnerabilitiesBySbomProps> = ({
     },
     hasActionsColumn: false,
     isSortEnabled: true,
-    sortableColumns: ["id"],
+    sortableColumns: [
+      "id",
+      "cvss",
+      "affectedDependencies",
+      "published",
+      "updated",
+    ],
+    getSortValues: (item) => ({
+      id: item.vulnerability.identifier,
+      cvss: getSeverityPriority(item.vulnerability.average_severity),
+      affectedDependencies: item.summary.totalPackages,
+      published: item.vulnerability?.published
+        ? dayjs(item.vulnerability.published).valueOf()
+        : 0,
+      updated: item.vulnerability?.modified
+        ? dayjs(item.vulnerability.modified).valueOf()
+        : 0,
+    }),
     isPaginationEnabled: true,
     isFilterEnabled: false,
     isExpansionEnabled: true,
@@ -216,42 +166,6 @@ export const VulnerabilitiesBySbom: React.FC<VulnerabilitiesBySbomProps> = ({
     expansionDerivedState: { isCellExpanded },
   } = tableControls;
 
-  //
-
-  const donutChartData = React.useMemo(() => {
-    return tableData.reduce((prev, current) => {
-      if (current.vulnerability?.average_severity) {
-        const severity = current.vulnerability?.average_severity;
-        return {
-          ...prev,
-          total: prev.total + 1,
-          summary: {
-            ...prev.summary,
-            [severity]: prev.summary[severity] + 1,
-          },
-        };
-      } else {
-        return prev;
-      }
-    }, DEFAULT_DONUT_CHART_DATA);
-  }, [tableData]);
-
-  const donutChart = React.useMemo(() => {
-    return Object.keys(donutChartData.summary)
-      .map((item) => {
-        const severity = item as Severity;
-        const count = donutChartData.summary[severity];
-        const severityProps = severityList[severity];
-        return {
-          severity,
-          count,
-          label: severityProps.name,
-          color: severityProps.color.value,
-        };
-      })
-      .sort(compareBySeverityFn((item) => item.severity));
-  }, [donutChartData]);
-
   return (
     <>
       <Stack hasGutter>
@@ -259,39 +173,16 @@ export const VulnerabilitiesBySbom: React.FC<VulnerabilitiesBySbomProps> = ({
           <Card>
             <CardBody>
               <LoadingWrapper
-                isFetching={
-                  isFetchingAdvisories ||
-                  isFetchingVulnerabilities ||
-                  isFetchingSbom
-                }
+                isFetching={isFetchingSbom || isFetchingVulnerabilities}
+                fetchError={fetchErrorSbom}
               >
                 <Grid hasGutter>
                   <GridItem md={6}>
-                    <div style={{ height: "230px", width: "350px" }}>
-                      <ChartDonut
-                        constrainToVisibleArea
-                        legendOrientation="vertical"
-                        legendPosition="right"
-                        padding={{
-                          bottom: 20,
-                          left: 20,
-                          right: 140,
-                          top: 20,
-                        }}
-                        title={`${donutChartData.total}`}
-                        subTitle="Total vulnerabilities"
-                        width={350}
-                        legendData={donutChart.map(({ label, count }) => ({
-                          name: `${label}: ${count}`,
-                        }))}
-                        data={donutChart.map(({ label, count }) => ({
-                          x: label,
-                          y: count,
-                        }))}
-                        labels={({ datum }) => `${datum.x}: ${datum.y}`}
-                        colorScale={donutChart.map(({ color }) => color)}
-                      />
-                    </div>
+                    <SbomVulnerabilitiesDonutChart
+                      vulnerabilitiesSummary={
+                        vulnerabilitiesSummary.vulnerabilityStatus.affected
+                      }
+                    />
                   </GridItem>
                   <GridItem md={6}>
                     <DescriptionList>
@@ -349,8 +240,8 @@ export const VulnerabilitiesBySbom: React.FC<VulnerabilitiesBySbomProps> = ({
               </Tr>
             </Thead>
             <ConditionalTableBody
-              isLoading={isFetchingAdvisories || isFetchingVulnerabilities}
-              isError={!!fetchErrorAdvisories}
+              isLoading={isFetchingVulnerabilities}
+              isError={!!fetchErrorVulnerabilities}
               isNoData={tableDataWithUiId.length === 0}
               numRenderedColumns={numRenderedColumns}
             >
@@ -367,8 +258,10 @@ export const VulnerabilitiesBySbom: React.FC<VulnerabilitiesBySbomProps> = ({
                         rowIndex={rowIndex}
                       >
                         <Td width={15} {...getTdProps({ columnKey: "id" })}>
-                          <Link to={`/vulnerabilities/${item.vulnerabilityId}`}>
-                            {item.vulnerabilityId}
+                          <Link
+                            to={`/vulnerabilities/${item.vulnerability.identifier}`}
+                          >
+                            {item.vulnerability.identifier}
                           </Link>
                         </Td>
                         <Td
@@ -376,11 +269,14 @@ export const VulnerabilitiesBySbom: React.FC<VulnerabilitiesBySbomProps> = ({
                           modifier="truncate"
                           {...getTdProps({ columnKey: "description" })}
                         >
-                          {item.vulnerability?.title ||
-                            item.vulnerability?.description}
+                          {item.vulnerability && (
+                            <VulnerabilityDescription
+                              vulnerability={item.vulnerability}
+                            />
+                          )}
                         </Td>
                         <Td width={10} {...getTdProps({ columnKey: "cvss" })}>
-                          {item.vulnerability?.average_severity && (
+                          {item.vulnerability.average_severity && (
                             <SeverityShieldAndText
                               value={item.vulnerability.average_severity}
                             />
@@ -396,7 +292,7 @@ export const VulnerabilitiesBySbom: React.FC<VulnerabilitiesBySbomProps> = ({
                             rowIndex,
                           })}
                         >
-                          {item.packages.length}
+                          {item.summary.totalPackages}
                         </Td>
                         <Td
                           width={10}
@@ -410,7 +306,7 @@ export const VulnerabilitiesBySbom: React.FC<VulnerabilitiesBySbomProps> = ({
                           modifier="truncate"
                           {...getTdProps({ columnKey: "updated" })}
                         >
-                          CREATE_ISSUE
+                          {formatDate(item.vulnerability?.modified)}
                         </Td>
                       </TableRowContentWithControls>
                     </Tr>
@@ -436,26 +332,76 @@ export const VulnerabilitiesBySbom: React.FC<VulnerabilitiesBySbomProps> = ({
                                     </Tr>
                                   </Thead>
                                   <Tbody>
-                                    {item.packages
-                                      .flatMap((item) => item.purl)
+                                    {item.summary.allPackages
+                                      .flatMap((item) => {
+                                        // Some packages do not have purl neither ID. So we render only the parent name meanwhile
+                                        type EnrichedPurlSummary = {
+                                          parentName: string;
+                                          purlSummary?: PurlSummary;
+                                        };
+
+                                        const hasNoPurlsButOnlyName =
+                                          item.name && item.purl.length == 0;
+
+                                        if (hasNoPurlsButOnlyName) {
+                                          const result: EnrichedPurlSummary = {
+                                            parentName: item.name,
+                                          };
+                                          return [result];
+                                        } else {
+                                          return item.purl.map((i) => {
+                                            const result: EnrichedPurlSummary =
+                                              {
+                                                parentName: item.name,
+                                                purlSummary: i,
+                                              };
+                                            return result;
+                                          });
+                                        }
+                                      })
                                       .map((purl, index) => {
-                                        const props = decomposePurl(purl.purl);
-                                        return (
-                                          <Tr key={index}>
-                                            <Td>{props?.type}</Td>
-                                            <Td>{props?.namespace}</Td>
-                                            <Td>{props?.name}</Td>
-                                            <Td>{props?.version}</Td>
-                                            <Td>{props?.path}</Td>
-                                            <Td>
-                                              {props?.qualifiers && (
-                                                <PackageQualifiers
-                                                  value={props?.qualifiers}
-                                                />
-                                              )}
-                                            </Td>
-                                          </Tr>
-                                        );
+                                        if (purl.purlSummary) {
+                                          const decomposedPurl = decomposePurl(
+                                            purl.purlSummary.purl
+                                          );
+                                          return (
+                                            <Tr key={`${index}-purl`}>
+                                              <Td>{decomposedPurl?.type}</Td>
+                                              <Td>
+                                                {decomposedPurl?.namespace}
+                                              </Td>
+                                              <Td>
+                                                <Link
+                                                  to={`/packages/${purl.purlSummary.uuid}`}
+                                                >
+                                                  {decomposedPurl?.name}
+                                                </Link>
+                                              </Td>
+                                              <Td>{decomposedPurl?.version}</Td>
+                                              <Td>{decomposedPurl?.path}</Td>
+                                              <Td>
+                                                {decomposedPurl?.qualifiers && (
+                                                  <PackageQualifiers
+                                                    value={
+                                                      decomposedPurl?.qualifiers
+                                                    }
+                                                  />
+                                                )}
+                                              </Td>
+                                            </Tr>
+                                          );
+                                        } else {
+                                          return (
+                                            <Tr key={`${index}-name`}>
+                                              <Td></Td>
+                                              <Td></Td>
+                                              <Td>{purl.parentName}</Td>
+                                              <Td></Td>
+                                              <Td></Td>
+                                              <Td></Td>
+                                            </Tr>
+                                          );
+                                        }
                                       })}
                                   </Tbody>
                                 </Table>

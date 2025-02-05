@@ -4,7 +4,10 @@ import { AxiosError } from "axios";
 
 import { SbomSummary } from "@app/client";
 import { FilterType } from "@app/components/FilterToolbar";
-import { TablePersistenceKeyPrefixes } from "@app/Constants";
+import {
+  FILTER_TEXT_CATEGORY_KEY,
+  TablePersistenceKeyPrefixes,
+} from "@app/Constants";
 import {
   getHubRequestParams,
   ITableControls,
@@ -23,8 +26,8 @@ interface ISbomSearchContext {
     | "published"
     | "supplier"
     | "vulnerabilities",
-    "published",
-    "",
+    "name" | "published",
+    "" | "published",
     string
   >;
 
@@ -48,24 +51,30 @@ export const SbomSearchProvider: React.FunctionComponent<ISbomProvider> = ({
   const tableControlState = useTableControlState({
     tableName: "sbom",
     persistenceKeyPrefix: TablePersistenceKeyPrefixes.sboms,
+    persistTo: "urlParams",
     columnNames: {
       name: "Name",
       version: "Version",
       supplier: "Supplier",
-      published: "Published",
-      packages: "Packages",
+      published: "Created on",
+      packages: "Dependencies",
       vulnerabilities: "Vulnerabilities",
     },
     isPaginationEnabled: true,
     isSortEnabled: true,
-    sortableColumns: ["published"],
+    sortableColumns: ["name", "published"],
     isFilterEnabled: true,
     filterCategories: [
       {
-        categoryKey: "",
+        categoryKey: FILTER_TEXT_CATEGORY_KEY,
         title: "Filter text",
         placeholderText: "Search",
         type: FilterType.search,
+      },
+      {
+        categoryKey: "published",
+        title: "Created on",
+        type: FilterType.dateRange,
       },
     ],
     isExpansionEnabled: false,
@@ -79,6 +88,7 @@ export const SbomSearchProvider: React.FunctionComponent<ISbomProvider> = ({
     getHubRequestParams({
       ...tableControlState,
       hubSortFieldKeys: {
+        name: "name",
         published: "published",
       },
     })
