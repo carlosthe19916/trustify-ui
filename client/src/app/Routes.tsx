@@ -23,6 +23,7 @@ const PackageDetails = lazy(() => import("./pages/package-details"));
 
 // SBOM
 const SBOMList = lazy(() => import("./pages/sbom-list"));
+const SBOMcan = lazy(() => import("./pages/sbom-scan"));
 const SBOMDetails = lazy(() => import("./pages/sbom-details"));
 
 // Others
@@ -43,6 +44,7 @@ export const Paths = {
   vulnerabilities: "/vulnerabilities",
   vulnerabilityDetails: `/vulnerabilities/:${PathParam.VULNERABILITY_ID}`,
   sboms: "/sboms",
+  sbomScan: "/sboms/scan",
   sbomDetails: `/sboms/:${PathParam.SBOM_ID}`,
   packages: "/packages",
   packageDetails: `/packages/:${PathParam.PACKAGE_ID}`,
@@ -70,6 +72,7 @@ export const AppRoutes = () => {
       element: <PackageDetails />,
     },
     { path: Paths.sboms, element: <SBOMList /> },
+    { path: Paths.sbomScan, element: <SBOMcan /> },
     {
       path: Paths.sbomDetails,
       element: <SBOMDetails />,
