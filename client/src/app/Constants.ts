@@ -46,3 +46,8 @@ export const ANSICOLOR = {
   lightBlue: "\x1b[94m",
   red: "\x1b[31m",
 };
+
+//
+
+export const WINDOW_PURLS = "__purls";
+export const WINDOW_ANALYSIS_RESPONSE = "__analysisResponse";

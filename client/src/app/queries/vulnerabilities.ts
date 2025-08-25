@@ -11,7 +11,10 @@ import {
   getVulnerability,
   listVulnerabilities,
 } from "@app/client";
+import { WINDOW_ANALYSIS_RESPONSE } from "@app/Constants";
+import ENV from "@app/env";
 import { requestParamsQuery } from "@app/hooks/table-controls";
+import { mockPromise } from "./helpers";
 
 export const VulnerabilitiesQueryKey = "vulnerabilities";
 
@@ -42,25 +45,40 @@ export const useFetchVulnerabilities = (
 };
 
 export const useFetchVulnerabilitiesByPackageIds = (ids: string[]) => {
-  const idChunks = ids.reduce<string[][]>((chunks, item, index) => {
-    if (index % 100 === 0) {
-      chunks.push([item]);
-    } else {
-      chunks[chunks.length - 1].push(item);
-    }
-    return chunks;
-  }, []);
+  const chunks =
+    ENV.MOCK === "off"
+      ? {
+          ids: ids.reduce<string[][]>((chunks, item, index) => {
+            if (index % 100 === 0) {
+              chunks.push([item]);
+            } else {
+              chunks[chunks.length - 1].push(item);
+            }
+            return chunks;
+          }, []),
+          dataResolver: async (ids: string[]) => {
+            const response = await analyze({
+              client,
+              body: { purls: ids },
+            });
+            return response.data;
+          },
+        }
+      : {
+          ids: [ids],
+          dataResolver: (_ids: string[]) => {
+            return mockPromise(
+              // biome-ignore lint/suspicious/noExplicitAny: allowed
+              (window as any)[WINDOW_ANALYSIS_RESPONSE] as AnalysisResponse,
+            );
+          },
+        };
 
   const userQueries = useQueries({
-    queries: idChunks.map((ids) => {
+    queries: chunks.ids.map((ids) => {
       return {
         queryKey: [VulnerabilitiesQueryKey, ids],
-        queryFn: () => {
-          return analyze({
-            client,
-            body: { purls: ids },
-          });
-        },
+        queryFn: () => chunks.dataResolver(ids),
         retry: false,
       };
     }),
@@ -74,7 +92,7 @@ export const useFetchVulnerabilitiesByPackageIds = (ids: string[]) => {
   const packages: AnalysisResponse = {};
 
   if (!isFetching) {
-    for (const data of userQueries.map(({ data }) => data?.data ?? {})) {
+    for (const data of userQueries.map((item) => item?.data ?? {})) {
       for (const [id, analysisDetails] of Object.entries(data)) {
         packages[id] = analysisDetails;
       }

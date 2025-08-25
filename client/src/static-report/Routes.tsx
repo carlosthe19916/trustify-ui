@@ -6,14 +6,16 @@ import { Bullseye, Spinner } from "@patternfly/react-core";
 
 import { ErrorFallback } from "@app/components/ErrorFallback";
 
-const Home = lazy(() => import("@static-report/pages/home"));
+const Vulnerabilities = lazy(
+  () => import("@static-report/pages/vulnerabilities"),
+);
 
 export const Paths = {} as const;
 
 export enum PathParam {}
 
 export const AppRoutes = () => {
-  const allRoutes = useRoutes([{ path: "/", element: <Home /> }]);
+  const allRoutes = useRoutes([{ path: "/", element: <Vulnerabilities /> }]);
 
   return (
     <Suspense
