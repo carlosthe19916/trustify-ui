@@ -14,6 +14,7 @@ import {
 import { WINDOW_ANALYSIS_RESPONSE } from "@app/Constants";
 import ENV from "@app/env";
 import { requestParamsQuery } from "@app/hooks/table-controls";
+
 import { mockPromise } from "./helpers";
 
 export const VulnerabilitiesQueryKey = "vulnerabilities";

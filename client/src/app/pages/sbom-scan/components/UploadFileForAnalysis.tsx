@@ -7,6 +7,7 @@ import {
   EmptyStateBody,
   EmptyStateFooter,
   EmptyStateVariant,
+  ExpandableSection,
   List,
   ListItem,
   Modal,
@@ -72,6 +73,7 @@ export const UploadFileForAnalysis: React.FC<IUploadFileForAnalysisProps> = ({
           titleText="Drag and drop files here"
           titleTextSeparator="or"
           infoText="Accepted file types: .json, .bz2"
+          browseButtonText="Browse Files"
         />
       ) : (
         Array.from(uploads.entries()).map(([file, upload], index) => {
@@ -103,18 +105,24 @@ export const UploadFileForAnalysis: React.FC<IUploadFileForAnalysisProps> = ({
               );
             }
 
+            console.log(upload.error);
             return (
               <EmptyState
                 key={`${file.name}-${index}-error`}
                 status="danger"
                 headingLevel="h4"
-                titleText="Upload failed"
+                titleText={`Error ${upload.error.status ?? upload.error.code}: Upload failed`}
                 icon={ExclamationCircleIcon}
                 variant={EmptyStateVariant.sm}
               >
                 <EmptyStateBody>
                   The file could not be analyzed. The file might be corrupted or
                   an unsupported format.
+                  {upload.error.response?.data.message && (
+                    <ExpandableSection toggleText="Show details">
+                      {upload.error.response?.data.message}
+                    </ExpandableSection>
+                  )}
                 </EmptyStateBody>
                 <EmptyStateFooter>
                   <EmptyStateActions>

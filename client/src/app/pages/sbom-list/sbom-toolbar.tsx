@@ -51,7 +51,7 @@ export const SbomToolbar: React.FC<SbomToolbarProps> = ({ showFilters }) => {
                 variant="secondary"
                 onClick={() => navigate(Paths.sbomScan)}
               >
-                Generate SBOM report
+                Generate vulnerability report
               </Button>
             </ToolbarItem>
           </>

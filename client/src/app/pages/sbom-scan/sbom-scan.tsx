@@ -86,22 +86,31 @@ export const SbomScan: React.FC = () => {
           <BreadcrumbItem>
             <Link to={Paths.sboms}>SBOMs</Link>
           </BreadcrumbItem>
-          <BreadcrumbItem isActive>Generate SBOM report</BreadcrumbItem>
+          <BreadcrumbItem isActive>
+            Generate vulnerability report
+          </BreadcrumbItem>
         </Breadcrumb>
       </PageSection>
       <PageSection>
-        <Split>
-          <SplitItem isFilled>
-            <Content>
-              <Content component="h1">Scan SBOM</Content>
-              <Content component="p">
-                Upload an SBOM file to generate a temporary vulnerability and
-                license report. The file and report will not be saved.
-              </Content>
+        {uploadResponseData === null || isFetching || fetchError ? (
+          <Content>
+            <Content component="h1">Generate vulnerability report</Content>
+            <Content component="p">
+              Select an SBOM file to generate a temporary vulnerability report.
+              The file and report will not be saved.
             </Content>
-          </SplitItem>
-          <SplitItem>
-            {uploadResponseData !== null && !isFetching && !fetchError && (
+          </Content>
+        ) : (
+          <Split>
+            <SplitItem isFilled>
+              <Content>
+                <Content component="h1">Vulnerability report</Content>
+                <Content component="p">
+                  This is a temporary vulnerability report.
+                </Content>
+              </Content>
+            </SplitItem>
+            <SplitItem>
               <Dropdown
                 isOpen={isActionsDropdownOpen}
                 onSelect={() => setIsActionsDropdownOpen(false)}
@@ -125,9 +134,9 @@ export const SbomScan: React.FC = () => {
                   </DropdownItem>
                 </DropdownList>
               </Dropdown>
-            )}
-          </SplitItem>
-        </Split>
+            </SplitItem>
+          </Split>
+        )}
       </PageSection>
       <PageSection>
         {uploadResponseData === null ? (
