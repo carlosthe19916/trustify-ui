@@ -48,7 +48,7 @@ jobs:
           if [[ "$branch" != "main" ]]; then
             image_tag="${branch#release/}"
           fi
-          echo "image_tag=image_tag" >> $GITHUB_ENV
+          echo "image_tag=$image_tag" >> $GITHUB_ENV
       - name: Extract vars for Push
         shell: bash
         if: ${{ github.event_name != 'pull_request' && github.event_name != 'merge_group' }}
@@ -62,6 +62,7 @@ jobs:
       - name: Set outputs
         id: set-outputs
         run: |
+          echo ${{ env.image_tag }}
           echo "image_tag=${{ env.image_tag }}" >> "$GITHUB_OUTPUT"
 
   run-e2e-ci:
