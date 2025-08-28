@@ -1,12 +1,8 @@
 import type React from "react";
 import { useReducer, useState } from "react";
-import { useAuth } from "react-oidc-context";
-import { useNavigate } from "react-router-dom";
 
 import {
-  Avatar,
   Brand,
-  Divider,
   Dropdown,
   DropdownItem,
   DropdownList,
@@ -26,7 +22,7 @@ import {
   Toolbar,
   ToolbarContent,
   ToolbarGroup,
-  ToolbarItem,
+  ToolbarItem
 } from "@patternfly/react-core";
 
 import EllipsisVIcon from "@patternfly/react-icons/dist/esm/icons/ellipsis-v-icon";
@@ -34,10 +30,8 @@ import HelpIcon from "@patternfly/react-icons/dist/esm/icons/help-icon";
 import BarsIcon from "@patternfly/react-icons/dist/js/icons/bars-icon";
 import ExternalLinkAltIcon from "@patternfly/react-icons/dist/js/icons/external-link-alt-icon";
 
-import { isAuthRequired } from "@app/Constants";
 import useBranding from "@app/hooks/useBranding";
 
-import imgAvatar from "@app/images/avatar.svg";
 import { AboutApp } from "./about";
 
 export const HeaderApp: React.FC = () => {
@@ -45,18 +39,13 @@ export const HeaderApp: React.FC = () => {
     masthead: { leftBrand, leftTitle, rightBrand, supportUrl },
   } = useBranding();
 
-  // biome-ignore lint/correctness/useHookAtTopLevel: allowed
-  const auth = (isAuthRequired && useAuth()) || undefined;
-
-  const navigate = useNavigate();
-
   const [isAboutModalOpen, toggleIsAboutModalOpen] = useReducer(
     (state) => !state,
     false,
   );
   const [isHelpDropdownOpen, setIsHelpDropdownOpen] = useState(false);
   const [isKebabDropdownOpen, setIsKebabDropdownOpen] = useState(false);
-  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [_isUserDropdownOpen,_setIsUserDropdownOpenn] = useState(false);
 
   const onHelpDropdownToggle = () => {
     setIsHelpDropdownOpen(!isHelpDropdownOpen);
@@ -64,16 +53,6 @@ export const HeaderApp: React.FC = () => {
 
   const onKebabDropdownToggle = () => {
     setIsKebabDropdownOpen(!isKebabDropdownOpen);
-  };
-
-  const logout = () => {
-    auth
-      ?.signoutRedirect()
-      .then(() => {})
-      .catch((err) => {
-        console.error("Logout failed:", err);
-        navigate("/");
-      });
   };
 
   return (
@@ -115,18 +94,16 @@ export const HeaderApp: React.FC = () => {
           </MastheadBrand>
         </MastheadMain>
         <MastheadContent>
-          <Toolbar id="toolbar" isFullHeight isStatic>
+          <Toolbar isFullHeight isStatic>
             <ToolbarContent>
               {/* toolbar items to always show */}
               <ToolbarGroup
-                id="header-toolbar-tasks"
                 variant="action-group-plain"
                 align={{ default: "alignEnd" }}
               />
 
               {/* toolbar items to show at desktop sizes */}
               <ToolbarGroup
-                id="header-toolbar-desktop"
                 variant="action-group-plain"
                 gap={{ default: "gapNone", md: "gapMd" }}
                 visibility={{
@@ -185,7 +162,6 @@ export const HeaderApp: React.FC = () => {
 
               {/* toolbar items to show at mobile sizes */}
               <ToolbarGroup
-                id="header-toolbar-mobile"
                 variant="action-group-plain"
                 gap={{ default: "gapNone", md: "gapMd" }}
                 visibility={{ lg: "hidden" }}
@@ -211,12 +187,6 @@ export const HeaderApp: React.FC = () => {
                     )}
                   >
                     <DropdownList>
-                      {auth && (
-                        <DropdownItem key="logout" onClick={logout}>
-                          Logout
-                        </DropdownItem>
-                      )}
-                      <Divider key="separator" component="li" />
                       {supportUrl && (
                         <DropdownItem
                           key="support"
@@ -244,47 +214,11 @@ export const HeaderApp: React.FC = () => {
 
               {/* Show the SSO menu at desktop sizes */}
               <ToolbarGroup
-                id="header-toolbar-sso"
                 visibility={{
                   default: "hidden",
                   md: "visible",
                 }}
-              >
-                {auth && (
-                  <ToolbarItem
-                    visibility={{ default: "hidden", md: "visible" }}
-                  >
-                    <Dropdown
-                      isOpen={isUserDropdownOpen}
-                      onSelect={() => setIsUserDropdownOpen(false)}
-                      onOpenChange={(isOpen: boolean) =>
-                        setIsUserDropdownOpen(isOpen)
-                      }
-                      popperProps={{ position: "right" }}
-                      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                        <MenuToggle
-                          ref={toggleRef}
-                          onClick={() =>
-                            setIsUserDropdownOpen(!isUserDropdownOpen)
-                          }
-                          isFullHeight
-                          isExpanded={isUserDropdownOpen}
-                          icon={<Avatar src={imgAvatar} alt="" size="sm" />}
-                        >
-                          {auth.user?.profile.preferred_username ||
-                            auth.user?.profile.sub}
-                        </MenuToggle>
-                      )}
-                    >
-                      <DropdownList>
-                        <DropdownItem key="logout" onClick={logout}>
-                          Logout
-                        </DropdownItem>
-                      </DropdownList>
-                    </Dropdown>
-                  </ToolbarItem>
-                )}
-              </ToolbarGroup>
+              ></ToolbarGroup>
 
               {rightBrand ? (
                 <ToolbarGroup>

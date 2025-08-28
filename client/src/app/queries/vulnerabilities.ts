@@ -70,7 +70,8 @@ export const useFetchVulnerabilitiesByPackageIds = (ids: string[]) => {
           dataResolver: (_ids: string[]) => {
             return mockPromise(
               // biome-ignore lint/suspicious/noExplicitAny: allowed
-              (window as any)[WINDOW_ANALYSIS_RESPONSE] as AnalysisResponse,
+              ((window as any)[WINDOW_ANALYSIS_RESPONSE] as AnalysisResponse) ??
+                {},
             );
           },
         };

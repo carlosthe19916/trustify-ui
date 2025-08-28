@@ -7,7 +7,7 @@
   "scripts": {
     "clean": "rimraf ./dist",
     "clean:all": "rimraf ./dist ./node_modules",
-    "build": "npm run generate && rsbuild build",
+    "build": "npm run generate && rsbuild build && npm run build:static-report",
     "build:static-report": "npm run generate && rsbuild build -c rsbuild.static-report.config.ts",
     "check": "biome check --error-on-warnings .",
     "check:write": "biome check --write .",

@@ -45,7 +45,7 @@ export default defineConfig({
   html: {
     template: path.join(__dirname, "src", "static-report", "index.html"),
     templateParameters: {
-      _env: encodeEnv(TRUSTIFICATION_ENV, SERVER_ENV_KEYS),
+      _env: encodeEnv({ ...TRUSTIFICATION_ENV, MOCK: "on" }, SERVER_ENV_KEYS),
       branding: brandingStrings,
     },
   },
