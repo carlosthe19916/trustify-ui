@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { generatePath, NavLink } from "react-router-dom";
 
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 
@@ -10,6 +10,7 @@ import {
   TableHeaderContentWithControls,
   TableRowContentWithControls,
 } from "@app/components/TableControls";
+import { Paths } from "@app/Routes";
 
 import { PackageVulnerabilities } from "./components/PackageVulnerabilities";
 import { PackageSearchContext } from "./package-context";
@@ -28,7 +29,6 @@ export const PackageTable: React.FC = () => {
       getTrProps,
       getTdProps,
     },
-    expansionDerivedState: { isCellExpanded },
   } = tableControls;
 
   return (
@@ -62,8 +62,16 @@ export const PackageTable: React.FC = () => {
                     item={item}
                     rowIndex={rowIndex}
                   >
-                    <Td width={15} {...getTdProps({ columnKey: "name" })}>
-                      <NavLink to={`/packages/${item.uuid}`}>
+                    <Td
+                      width={15}
+                      modifier="breakWord"
+                      {...getTdProps({ columnKey: "name" })}
+                    >
+                      <NavLink
+                        to={generatePath(Paths.packageDetails, {
+                          packageId: item.uuid,
+                        })}
+                      >
                         {item.decomposedPurl
                           ? item.decomposedPurl?.name
                           : item.purl}
@@ -120,7 +128,6 @@ export const PackageTable: React.FC = () => {
       <SimplePagination
         idPrefix="package-table"
         isTop={false}
-        isCompact
         paginationProps={paginationProps}
       />
     </>

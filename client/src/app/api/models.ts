@@ -1,4 +1,5 @@
-import { Labels } from "@app/client";
+import type { Labels } from "@app/client";
+import type { Severity } from "@app/client";
 
 export type WithUiId<T> = T & { _ui_unique_id: string };
 
@@ -52,6 +53,11 @@ export interface DecomposedPurl {
   path?: string;
 }
 
+export type ExtendedSeverity = Severity | "unknown";
+export const extendedSeverityFromSeverity = (
+  value?: Severity | null,
+): ExtendedSeverity => value ?? "unknown";
+
 // User preferences
 
 export interface WatchedSboms {
@@ -59,4 +65,11 @@ export interface WatchedSboms {
   sbom2Id: string | null;
   sbom3Id: string | null;
   sbom4Id: string | null;
+}
+
+//
+
+export interface Label {
+  key: string;
+  value?: string;
 }

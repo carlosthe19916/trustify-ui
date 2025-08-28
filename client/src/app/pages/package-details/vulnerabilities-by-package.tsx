@@ -1,14 +1,19 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { generatePath, Link } from "react-router-dom";
 
 import dayjs from "dayjs";
 
 import { Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core";
-import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
+import {
+  Table,
+  TableText,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tr,
+} from "@patternfly/react-table";
 
-import { getSeverityPriority } from "@app/api/model-utils";
-import { VulnerabilityStatus } from "@app/api/models";
-import { PurlAdvisory, VulnerabilityDetails } from "@app/client";
 import { SeverityShieldAndText } from "@app/components/SeverityShieldAndText";
 import { SimplePagination } from "@app/components/SimplePagination";
 import {
@@ -16,18 +21,13 @@ import {
   TableHeaderContentWithControls,
   TableRowContentWithControls,
 } from "@app/components/TableControls";
+import { TdWithFocusStatus } from "@app/components/TdWithFocusStatus";
 import { VulnerabilityDescription } from "@app/components/VulnerabilityDescription";
 import { useVulnerabilitiesOfPackage } from "@app/hooks/domain-controls/useVulnerabilitiesOfPackage";
 import { useLocalTableControls } from "@app/hooks/table-controls";
+import { Paths } from "@app/Routes";
 import { useWithUiId } from "@app/utils/query-utils";
 import { formatDate } from "@app/utils/utils";
-
-interface TableData {
-  vulnerabilityId: string;
-  advisory: PurlAdvisory;
-  status: VulnerabilityStatus;
-  vulnerability?: VulnerabilityDetails;
-}
 
 interface VulnerabilitiesByPackageProps {
   packageId: string;
@@ -37,20 +37,20 @@ export const VulnerabilitiesByPackage: React.FC<
   VulnerabilitiesByPackageProps
 > = ({ packageId }) => {
   const {
-    data: { vulnerabilities, summary },
+    data: { vulnerabilities },
     isFetching: isFetchingVulnerabilities,
     fetchError: fetchErrorVulnerabilities,
   } = useVulnerabilitiesOfPackage(packageId);
 
   const affectedVulnerabilities = React.useMemo(() => {
     return vulnerabilities.filter(
-      (item) => item.vulnerabilityStatus === "affected"
+      (item) => item.vulnerabilityStatus === "affected",
     );
   }, [vulnerabilities]);
 
   const tableDataWithUiId = useWithUiId(
     affectedVulnerabilities,
-    (d) => `${d.vulnerability.identifier}-${d.vulnerabilityStatus}`
+    (d) => `${d.vulnerability.identifier}-${d.vulnerabilityStatus}`,
   );
 
   const tableControls = useLocalTableControls({
@@ -67,15 +67,15 @@ export const VulnerabilitiesByPackage: React.FC<
     hasActionsColumn: false,
     isSortEnabled: true,
     sortableColumns: ["identifier", "severity", "published"],
-    getSortValues: (item) => ({
-      identifier: item.vulnerability.identifier,
-      severity: item.vulnerability?.average_severity
-        ? getSeverityPriority(item.vulnerability?.average_severity)
-        : 0,
-      published: item.vulnerability?.published
-        ? dayjs(item.vulnerability?.published).valueOf()
-        : 0,
-    }),
+    getSortValues: (item) => {
+      return {
+        identifier: item.vulnerability.identifier,
+        severity: item.vulnerability?.average_score || 0,
+        published: item.vulnerability?.published
+          ? dayjs(item.vulnerability?.published).valueOf()
+          : 0,
+      };
+    },
     isPaginationEnabled: true,
     isFilterEnabled: false,
     filterCategories: [],
@@ -87,7 +87,6 @@ export const VulnerabilitiesByPackage: React.FC<
     numRenderedColumns,
     propHelpers: {
       toolbarProps,
-      filterToolbarProps,
       paginationToolbarItemProps,
       paginationProps,
       tableProps,
@@ -100,7 +99,7 @@ export const VulnerabilitiesByPackage: React.FC<
 
   return (
     <>
-      <Toolbar {...toolbarProps}>
+      <Toolbar {...toolbarProps} aria-label="vulnerability toolbar">
         <ToolbarContent>
           <ToolbarItem {...paginationToolbarItemProps}>
             <SimplePagination
@@ -138,28 +137,49 @@ export const VulnerabilitiesByPackage: React.FC<
                     item={item}
                     rowIndex={rowIndex}
                   >
-                    <Td width={15} {...getTdProps({ columnKey: "identifier" })}>
+                    <Td
+                      width={15}
+                      modifier="breakWord"
+                      {...getTdProps({ columnKey: "identifier" })}
+                    >
                       <Link
-                        to={`/vulnerabilities/${item.vulnerability.identifier}`}
+                        to={generatePath(Paths.vulnerabilityDetails, {
+                          vulnerabilityId: item.vulnerability.identifier,
+                        })}
                       >
                         {item.vulnerability.identifier}
                       </Link>
                     </Td>
-                    <Td
-                      width={60}
-                      modifier="truncate"
-                      {...getTdProps({ columnKey: "description" })}
-                    >
-                      {item.vulnerability && (
-                        <VulnerabilityDescription
-                          vulnerability={item.vulnerability}
-                        />
+                    <TdWithFocusStatus>
+                      {(isFocused, setIsFocused) => (
+                        <Td
+                          width={60}
+                          modifier="truncate"
+                          onFocus={() => setIsFocused(true)}
+                          onBlur={() => setIsFocused(false)}
+                          tabIndex={0}
+                          {...getTdProps({ columnKey: "description" })}
+                        >
+                          <TableText
+                            focused={isFocused}
+                            wrapModifier="truncate"
+                          >
+                            {item.vulnerability && (
+                              <VulnerabilityDescription
+                                vulnerability={item.vulnerability}
+                              />
+                            )}
+                          </TableText>
+                        </Td>
                       )}
-                    </Td>
+                    </TdWithFocusStatus>
                     <Td width={15} {...getTdProps({ columnKey: "severity" })}>
                       {item.vulnerability?.average_severity && (
                         <SeverityShieldAndText
                           value={item.vulnerability.average_severity}
+                          score={item.vulnerability.average_score}
+                          showLabel
+                          showScore
                         />
                       )}
                     </Td>
@@ -180,7 +200,6 @@ export const VulnerabilitiesByPackage: React.FC<
       <SimplePagination
         idPrefix="vulnerability-table"
         isTop={false}
-        isCompact
         paginationProps={paginationProps}
       />
     </>

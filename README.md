@@ -12,17 +12,17 @@ Trustify UI Component is something else and now test the bot
 
 | branch | last merge e2e CI | nightly e2e CI |
 | :----- | :---------------- | :------------- |
-| main   | [![CI (global Trustify CI)](https://github.com/trustification/trustify-ui/actions/workflows/ci-global.yaml/badge.svg?branch=main&event=push)](https://github.com/trustification/trustify-ui/actions/workflows/ci-global.yaml?query=branch%3Amain+event%3Apush)               | [![Nightly CI (global trustify CI @main)](https://github.com/trustification/trustify-ui/actions/workflows/nightly-ci-global.yaml/badge.svg?branch=main&event=schedule)](https://github.com/trustification/trustify-ui/actions/workflows/nightly-ci-global.yaml?query=branch%3Amain+event%3Aschedule)            |
+| main   | [![CI (e2e Trustify CI)](https://github.com/trustification/trustify-ui/actions/workflows/ci-e2e.yaml/badge.svg?branch=main&event=push)](https://github.com/trustification/trustify-ui/actions/workflows/ci-e2e.yaml?query=branch%3Amain+event%3Apush)               | [![Nightly CI (e2e trustify CI @main)](https://github.com/trustification/trustify-ui/actions/workflows/nightly-ci-e2e.yaml/badge.svg?branch=main&event=schedule)](https://github.com/trustification/trustify-ui/actions/workflows/nightly-ci-e2e.yaml?query=branch%3Amain+event%3Aschedule)            |
 
 ## Development
 
 ### Requisites
 
-- NodeJS 20. Use [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#install--update-script) to install NodeJS
+[NodeJS](https://nodejs.org) >= 22. Use [nvm](https://nodejs.org/en/download) to install NodeJS
 
 ```shell
-nvm install 20
-nvm use 20
+nvm install 22
+nvm use 22
 ```
 
 - Backend. Clone [trustify](https://github.com/trustification/trustify) and there execute:
@@ -36,7 +36,7 @@ It will start the backend in http://localhost:8080
 ### Install dependencies
 
 ```shell
-npm clean-install --ignore-scripts
+npm ci
 ```
 
 ### Init the dev server
@@ -44,13 +44,6 @@ npm clean-install --ignore-scripts
 ```shell
 npm run start:dev
 ```
-
-> Known issue: after installing the dependencies for the first time and then executing `npm run start:dev` you will see
-> an error
-> `config/webpack.dev.ts(18,8): error TS2307: Cannot find module '@trustify-ui/common' or its corresponding type declarations`
-> Stop the command with Ctrl+C and run the command `npm run start:dev` again and the error should be gone. This only
-> happens the very first time we install dependencies in a clean environment, subsequent commands `npm run start:dev`
-> should not give that error. (bug under investigation)
 
 Open browser at <http://localhost:3000>
 
@@ -63,111 +56,12 @@ Open browser at <http://localhost:3000>
 | OIDC_CLIENT_ID      | Set Oidc Client               | frontend                                |
 | OIDC_SERVER_URL     | Set Oidc Server URL           | `http://localhost:8090/realms/trustify` |
 | OIDC_SCOPE          | Set Oidc Scope                | openid                                  |
-| ANALYTICS_ENABLED   | Enable/Disable analytics      | false                                   |
-| ANALYTICS_WRITE_KEY | Set Segment Write key         | null                                    |
 
 ## Crate
 
 > [!NOTE]
 > When using the crate it is expected to build the UI always in Prod mode
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71
-72
-73
-74
-75
-76
-77
-78
-79
-80
-81
-82
-83
-84
-85
-86
-87
-88
-89
-90
-91
-92
-93
-94
-95
-96
-97
-98
-99
-100
-101
+
+## Contributing
+
+We welcome contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting changes.

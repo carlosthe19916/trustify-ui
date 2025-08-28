@@ -1,6 +1,8 @@
-import React from "react";
+import type React from "react";
+
+import type { BulkSelectionValues } from "@app/hooks/selection/useBulkSelection";
+import type { ITableControls } from "@app/hooks/table-controls";
 import { Td } from "@patternfly/react-table";
-import { ITableControls } from "@app/hooks/table-controls";
 
 export interface ITableRowContentWithControlsProps<
   TItem,
@@ -11,7 +13,7 @@ export interface ITableRowContentWithControlsProps<
 > {
   isExpansionEnabled?: boolean;
   expandableVariant?: "single" | "compound";
-  isSelectionEnabled?: boolean;
+  getSelectCheckboxTdProps?: BulkSelectionValues<TItem>["propHelpers"]["getSelectCheckboxTdProps"];
   propHelpers: ITableControls<
     TItem,
     TColumnKey,
@@ -31,8 +33,8 @@ export const TableRowContentWithControls = <
 >({
   isExpansionEnabled = false,
   expandableVariant,
-  isSelectionEnabled = false,
-  propHelpers: { getSingleExpandButtonTdProps, getSelectCheckboxTdProps },
+  getSelectCheckboxTdProps,
+  propHelpers: { getSingleExpandButtonTdProps },
   item,
   rowIndex,
   children,
@@ -43,7 +45,7 @@ export const TableRowContentWithControls = <
     {isExpansionEnabled && expandableVariant === "single" ? (
       <Td {...getSingleExpandButtonTdProps({ item, rowIndex })} />
     ) : null}
-    {isSelectionEnabled ? (
+    {getSelectCheckboxTdProps ? (
       <Td {...getSelectCheckboxTdProps({ item, rowIndex })} />
     ) : null}
     {children}

@@ -1,13 +1,7 @@
-import React, { useMemo } from "react";
-import { Link } from "react-router-dom";
+import type React from "react";
+import { generatePath, Link } from "react-router-dom";
 
 import {
-  DescriptionList,
-  DescriptionListDescription,
-  DescriptionListGroup,
-  DescriptionListTerm,
-  Flex,
-  FlexItem,
   Label,
   List,
   ListItem,
@@ -26,84 +20,100 @@ import {
   Tr,
 } from "@patternfly/react-table";
 
-import { DecomposedPurl } from "@app/api/models";
-import { PurlSummary } from "@app/client";
+import type { LicenseRefMapping } from "@app/client";
 import { FilterToolbar, FilterType } from "@app/components/FilterToolbar";
-import { PackageQualifiers } from "@app/components/PackageQualifiers";
 import { SimplePagination } from "@app/components/SimplePagination";
 import {
   ConditionalTableBody,
   TableHeaderContentWithControls,
   TableRowContentWithControls,
 } from "@app/components/TableControls";
-import { useLocalTableControls } from "@app/hooks/table-controls";
+import { FILTER_TEXT_CATEGORY_KEY } from "@app/Constants";
+import {
+  getHubRequestParams,
+  useTableControlProps,
+  useTableControlState,
+} from "@app/hooks/table-controls";
 import { useFetchPackagesBySbomId } from "@app/queries/packages";
-import { decomposePurl } from "@app/utils/utils";
+import { useFetchSbomsLicenseIds } from "@app/queries/sboms";
+import { Paths } from "@app/Routes";
 
-interface TableData extends PurlSummary {
-  decomposedPurl?: DecomposedPurl;
-}
+import { PackageVulnerabilities } from "../package-list/components/PackageVulnerabilities";
+
+const renderLicenseWithMappings = (
+  license: string,
+  mappings: LicenseRefMapping[],
+) => {
+  return mappings.reduce((prev, { license_id, license_name }) => {
+    return prev.replaceAll(license_id, license_name);
+  }, `${license}`);
+};
 
 interface PackagesProps {
   sbomId: string;
 }
 
 export const PackagesBySbom: React.FC<PackagesProps> = ({ sbomId }) => {
-  const {
-    result: { data: allPackages },
-    isFetching,
-    fetchError,
-  } = useFetchPackagesBySbomId(sbomId, {
-    page: { pageNumber: 1, itemsPerPage: 0 },
-  });
+  const { licenseIds } = useFetchSbomsLicenseIds(sbomId);
 
-  const tableData = useMemo(() => {
-    return allPackages
-      .flatMap((item) => item.purl)
-      .map((item) => {
-        const result: TableData = {
-          ...item,
-          decomposedPurl: decomposePurl(item.purl),
-        };
-        return result;
-      });
-  }, [allPackages]);
-
-  const tableControls = useLocalTableControls({
+  const tableControlState = useTableControlState({
     tableName: "package-table",
-    idProperty: "uuid",
-    items: tableData,
-    isLoading: isFetching,
     columnNames: {
       name: "Name",
       version: "Version",
-      qualifiers: "Qualifiers",
+      vulnerabilities: "Vulnerabilities",
+      licenses: "Licenses",
+      purls: "PURLs",
+      cpes: "CPEs",
     },
-    hasActionsColumn: false,
     isSortEnabled: true,
-    sortableColumns: ["name", "version"],
-    getSortValues: (item) => ({
-      name: `${item.decomposedPurl?.name}/${item.decomposedPurl?.namespace}`,
-      version: item.version.version,
-    }),
+    sortableColumns: ["name"],
     isPaginationEnabled: true,
     isFilterEnabled: true,
     filterCategories: [
       {
-        categoryKey: "filterText",
-        title: "Filter tex",
+        categoryKey: FILTER_TEXT_CATEGORY_KEY,
+        title: "Filter text",
+        placeholderText: "Search",
         type: FilterType.search,
-        placeholderText: "Filter",
-        getItemValue: (item) => {
-          return (
-            `${item.decomposedPurl?.name}/${item.decomposedPurl?.namespace}` ||
-            ""
-          );
-        },
+      },
+      {
+        categoryKey: "license",
+        title: "License",
+        placeholderText: "Filter results by license",
+        type: FilterType.multiselect,
+        operator: "~",
+        logicOperator: "OR",
+        selectOptions: licenseIds.map((license) => ({
+          value: license.license_id,
+          label: license.license_name,
+        })),
       },
     ],
     isExpansionEnabled: true,
-    expandableVariant: "single",
+    expandableVariant: "compound",
+  });
+
+  const {
+    result: { data: packages, total: totalItemCount },
+    isFetching,
+    fetchError,
+  } = useFetchPackagesBySbomId(
+    sbomId,
+    getHubRequestParams({
+      ...tableControlState,
+      hubSortFieldKeys: {
+        name: "name",
+      },
+    }),
+  );
+
+  const tableControls = useTableControlProps({
+    ...tableControlState,
+    idProperty: "id",
+    currentPageItems: packages,
+    totalItemCount,
+    isLoading: isFetching,
   });
 
   const {
@@ -125,9 +135,9 @@ export const PackagesBySbom: React.FC<PackagesProps> = ({ sbomId }) => {
 
   return (
     <>
-      <Toolbar {...toolbarProps}>
+      <Toolbar {...toolbarProps} aria-label="Package toolbar">
         <ToolbarContent>
-          <FilterToolbar showFiltersSideBySide {...filterToolbarProps} />
+          <FilterToolbar {...filterToolbarProps} />
           <ToolbarItem {...paginationToolbarItemProps}>
             <SimplePagination
               idPrefix="package-table"
@@ -144,93 +154,150 @@ export const PackagesBySbom: React.FC<PackagesProps> = ({ sbomId }) => {
             <TableHeaderContentWithControls {...tableControls}>
               <Th {...getThProps({ columnKey: "name" })} />
               <Th {...getThProps({ columnKey: "version" })} />
-              <Th {...getThProps({ columnKey: "qualifiers" })} />
+              <Th {...getThProps({ columnKey: "vulnerabilities" })} />
+              <Th {...getThProps({ columnKey: "licenses" })} />
+              <Th {...getThProps({ columnKey: "purls" })} />
+              <Th {...getThProps({ columnKey: "cpes" })} />
             </TableHeaderContentWithControls>
           </Tr>
         </Thead>
         <ConditionalTableBody
           isLoading={isFetching}
           isError={!!fetchError}
-          isNoData={tableData?.length === 0}
+          isNoData={totalItemCount === 0}
           numRenderedColumns={numRenderedColumns}
         >
           {currentPageItems?.map((item, rowIndex) => {
             return (
-              <Tbody key={item.uuid}>
+              <Tbody key={item.id} isExpanded={isCellExpanded(item)}>
                 <Tr {...getTrProps({ item })}>
                   <TableRowContentWithControls
                     {...tableControls}
                     item={item}
                     rowIndex={rowIndex}
                   >
-                    <Td width={30} {...getTdProps({ columnKey: "name" })}>
-                      <Flex>
-                        <FlexItem
-                          spacer={{ default: "spacerSm" }}
-                        >{`${item.decomposedPurl?.name}/${item.decomposedPurl?.namespace}`}</FlexItem>
-                        <FlexItem>
-                          <Label isCompact color="blue">
-                            {item.decomposedPurl?.type}
-                          </Label>
-                        </FlexItem>
-                      </Flex>
+                    <Td width={15} {...getTdProps({ columnKey: "name" })}>
+                      {[item.name, item.group].filter(Boolean).join("/")}
                     </Td>
-                    <Td width={20} {...getTdProps({ columnKey: "version" })}>
-                      {item.decomposedPurl?.version}
+                    <Td
+                      width={15}
+                      modifier="truncate"
+                      {...getTdProps({ columnKey: "version" })}
+                    >
+                      {item?.version}
                     </Td>
-                    <Td width={50} {...getTdProps({ columnKey: "qualifiers" })}>
-                      {item.decomposedPurl?.qualifiers && (
-                        <PackageQualifiers
-                          value={item.decomposedPurl?.qualifiers}
-                        />
+                    <Td
+                      width={10}
+                      modifier="breakWord"
+                      {...getTdProps({ columnKey: "vulnerabilities" })}
+                    >
+                      {item.purl[0] && (
+                        <PackageVulnerabilities packageId={item.purl[0].uuid} />
                       )}
+                    </Td>
+                    <Td
+                      width={20}
+                      modifier="breakWord"
+                      {...getTdProps({
+                        columnKey: "licenses",
+                        isCompoundExpandToggle: item.licenses.length > 1,
+                        item: item,
+                        rowIndex,
+                      })}
+                    >
+                      {item.licenses.length === 1
+                        ? renderLicenseWithMappings(
+                            item.licenses[0].license_name,
+                            item.licenses_ref_mapping,
+                          )
+                        : `${item.licenses.length} Licenses`}
+                    </Td>
+                    <Td
+                      width={20}
+                      modifier="breakWord"
+                      {...getTdProps({
+                        columnKey: "purls",
+                        isCompoundExpandToggle: item.purl.length > 1,
+                        item: item,
+                        rowIndex,
+                      })}
+                    >
+                      {item.purl.length === 1 ? (
+                        <Link
+                          to={generatePath(Paths.packageDetails, {
+                            packageId: item.purl[0].uuid,
+                          })}
+                        >
+                          {item.purl[0].purl}
+                        </Link>
+                      ) : (
+                        `${item.purl.length} PURLs`
+                      )}
+                    </Td>
+                    <Td
+                      width={20}
+                      modifier="breakWord"
+                      {...getTdProps({
+                        columnKey: "cpes",
+                        isCompoundExpandToggle: item.cpe.length > 0,
+                        item,
+                        rowIndex,
+                      })}
+                    >
+                      {item.cpe.length} CPEs
                     </Td>
                   </TableRowContentWithControls>
                 </Tr>
                 {isCellExpanded(item) ? (
                   <Tr isExpanded>
-                    <Td />
                     <Td
                       {...getExpandedContentTdProps({
                         item,
                       })}
-                      className={spacing.pyLg}
+                      className={spacing.pLg}
                     >
                       <ExpandableRowContent>
-                        <DescriptionList
-                          columnModifier={{
-                            default: "3Col",
-                          }}
-                        >
-                          <DescriptionListGroup>
-                            <DescriptionListTerm>Packages</DescriptionListTerm>
-                            <DescriptionListDescription>
-                              <List>
-                                <ListItem>
-                                  <Link to={`/packages/${item.uuid}`}>
-                                    {item.purl}
-                                  </Link>
+                        <div className={spacing.ptLg}>
+                          {isCellExpanded(item, "licenses") ? (
+                            <List isPlain>
+                              {item.licenses.map((e) => (
+                                <ListItem
+                                  key={`${e.license_name}-${e.license_type}`}
+                                >
+                                  {renderLicenseWithMappings(
+                                    e.license_name,
+                                    item.licenses_ref_mapping,
+                                  )}{" "}
+                                  <Label isCompact>{e.license_type}</Label>
                                 </ListItem>
-                              </List>
-                            </DescriptionListDescription>
-                          </DescriptionListGroup>
-                          <DescriptionListGroup>
-                            <DescriptionListTerm>
-                              Base package
-                            </DescriptionListTerm>
-                            <DescriptionListDescription>
-                              {item.base.purl}
-                            </DescriptionListDescription>
-                          </DescriptionListGroup>
-                          <DescriptionListGroup>
-                            <DescriptionListTerm>Versions</DescriptionListTerm>
-                            <DescriptionListDescription>
-                              <List>
-                                <ListItem>{item.version.version}</ListItem>
-                              </List>
-                            </DescriptionListDescription>
-                          </DescriptionListGroup>
-                        </DescriptionList>
+                              ))}
+                            </List>
+                          ) : null}
+                          {isCellExpanded(item, "purls") ? (
+                            <List isPlain>
+                              {item.purl.map((e) => {
+                                return (
+                                  <ListItem key={e.uuid}>
+                                    <Link
+                                      to={generatePath(Paths.packageDetails, {
+                                        packageId: e.uuid,
+                                      })}
+                                    >
+                                      {e.purl}
+                                    </Link>
+                                  </ListItem>
+                                );
+                              })}
+                            </List>
+                          ) : null}
+                          {isCellExpanded(item, "cpes") ? (
+                            <List isPlain>
+                              {item.cpe.map((e) => (
+                                <ListItem key={e}>{e}</ListItem>
+                              ))}
+                            </List>
+                          ) : null}
+                        </div>
                       </ExpandableRowContent>
                     </Td>
                   </Tr>
@@ -240,10 +307,10 @@ export const PackagesBySbom: React.FC<PackagesProps> = ({ sbomId }) => {
           })}
         </ConditionalTableBody>
       </Table>
+
       <SimplePagination
         idPrefix="package-table"
         isTop={false}
-        isCompact
         paginationProps={paginationProps}
       />
     </>

@@ -1,21 +1,27 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { AxiosError } from "axios";
+import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 
-import { HubRequestParams } from "@app/api/models";
+import type { HubRequestParams } from "@app/api/models";
 import { client } from "@app/axios-config/apiInit";
 import {
+  type AnalysisResponse,
+  type VulnerabilityDetails,
+  analyze,
   deleteVulnerability,
   getVulnerability,
   listVulnerabilities,
-  VulnerabilityDetails,
 } from "@app/client";
+import { WINDOW_ANALYSIS_RESPONSE } from "@app/Constants";
+import ENV from "@app/env";
 import { requestParamsQuery } from "@app/hooks/table-controls";
+
+import { mockPromise } from "./helpers";
 
 export const VulnerabilitiesQueryKey = "vulnerabilities";
 
 export const useFetchVulnerabilities = (
   params: HubRequestParams = {},
-  refetchDisabled: boolean = false
+  disableQuery = false,
 ) => {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: [VulnerabilitiesQueryKey, params],
@@ -25,7 +31,7 @@ export const useFetchVulnerabilities = (
         query: { ...requestParamsQuery(params) },
       });
     },
-    refetchInterval: !refetchDisabled ? 5000 : false,
+    enabled: !disableQuery,
   });
   return {
     result: {
@@ -36,6 +42,69 @@ export const useFetchVulnerabilities = (
     isFetching: isLoading,
     fetchError: error as AxiosError,
     refetch,
+  };
+};
+
+export const useFetchVulnerabilitiesByPackageIds = (ids: string[]) => {
+  const chunks =
+    ENV.MOCK === "off"
+      ? {
+          ids: ids.reduce<string[][]>((chunks, item, index) => {
+            if (index % 100 === 0) {
+              chunks.push([item]);
+            } else {
+              chunks[chunks.length - 1].push(item);
+            }
+            return chunks;
+          }, []),
+          dataResolver: async (ids: string[]) => {
+            const response = await analyze({
+              client,
+              body: { purls: ids },
+            });
+            return response.data;
+          },
+        }
+      : {
+          ids: [ids],
+          dataResolver: (_ids: string[]) => {
+            return mockPromise(
+              // biome-ignore lint/suspicious/noExplicitAny: allowed
+              ((window as any)[WINDOW_ANALYSIS_RESPONSE] as AnalysisResponse) ??
+                {},
+            );
+          },
+        };
+
+  const userQueries = useQueries({
+    queries: chunks.ids.map((ids) => {
+      return {
+        queryKey: [VulnerabilitiesQueryKey, ids],
+        queryFn: () => chunks.dataResolver(ids),
+        retry: false,
+      };
+    }),
+  });
+
+  const isFetching = userQueries.some(({ isLoading }) => isLoading);
+  const fetchError = userQueries.find(
+    ({ error }) => !!(error as AxiosError | null),
+  );
+
+  const packages: AnalysisResponse = {};
+
+  if (!isFetching) {
+    for (const data of userQueries.map((item) => item?.data ?? {})) {
+      for (const [id, analysisDetails] of Object.entries(data)) {
+        packages[id] = analysisDetails;
+      }
+    }
+  }
+
+  return {
+    packages,
+    isFetching,
+    fetchError,
   };
 };
 
@@ -53,7 +122,7 @@ export const useFetchVulnerabilityById = (id: string) => {
 
 export const useDeleteVulnerabilityMutation = (
   onSuccess?: (payload: VulnerabilityDetails, id: string) => void,
-  onError?: (err: AxiosError, id: string) => void
+  onError?: (err: AxiosError, id: string) => void,
 ) => {
   return useMutation({
     mutationFn: async (id: string) => {

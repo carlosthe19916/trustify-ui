@@ -1,5 +1,5 @@
-import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import type React from "react";
+import { generatePath, Link, useNavigate } from "react-router-dom";
 
 import {
   Chart,
@@ -10,36 +10,37 @@ import {
   ChartStack,
   ChartThemeColor,
   ChartTooltip,
-} from "@patternfly/react-charts";
+} from "@patternfly/react-charts/victory";
 import {
   Card,
   CardBody,
   CardTitle,
+  Content,
   DescriptionList,
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
   EmptyState,
   EmptyStateBody,
-  EmptyStateHeader,
   EmptyStateVariant,
   Grid,
   GridItem,
   Stack,
   StackItem,
-  TextContent,
 } from "@patternfly/react-core";
 
 import { severityList } from "@app/api/model-utils";
-import { SbomHead, Severity } from "@app/client";
+import type { ExtendedSeverity } from "@app/api/models";
+import type { SbomHead } from "@app/client";
 import { LoadingWrapper } from "@app/components/LoadingWrapper";
 import { useVulnerabilitiesOfSboms } from "@app/hooks/domain-controls/useVulnerabilitiesOfSbom";
 import { useFetchAdvisories } from "@app/queries/advisories";
 import { useFetchSBOMs } from "@app/queries/sboms";
+import { Paths } from "@app/Routes";
 import { formatDateTime } from "@app/utils/utils";
 
 interface Legend {
-  severity: Severity;
+  severity: ExtendedSeverity;
 }
 
 const LEGENDS: Legend[] = [
@@ -48,6 +49,7 @@ const LEGENDS: Legend[] = [
   { severity: "medium" },
   { severity: "low" },
   { severity: "none" },
+  { severity: "unknown" },
 ];
 
 export const MonitoringSection: React.FC = () => {
@@ -59,13 +61,10 @@ export const MonitoringSection: React.FC = () => {
     result: { data: barchartSboms, total: totalSboms },
     isFetching: isFetchingBarchartSboms,
     fetchError: fetchErrorBarchartSboms,
-  } = useFetchSBOMs(
-    {
-      page: { pageNumber: 1, itemsPerPage: 10 },
-      sort: { field: "ingested", direction: "desc" },
-    },
-    true
-  );
+  } = useFetchSBOMs({
+    page: { pageNumber: 1, itemsPerPage: 10 },
+    sort: { field: "ingested", direction: "desc" },
+  });
 
   const {
     data: barchartSbomsVulnerabilities,
@@ -87,17 +86,14 @@ export const MonitoringSection: React.FC = () => {
     result: { data: advisories, total: totalAdvisories },
     isFetching: isFetchingAdvisories,
     fetchError: fetchErrorAdvisories,
-  } = useFetchAdvisories(
-    {
-      page: { pageNumber: 1, itemsPerPage: 10 },
-      sort: { field: "ingested", direction: "desc" },
-    },
-    true
-  );
+  } = useFetchAdvisories({
+    page: { pageNumber: 1, itemsPerPage: 10 },
+    sort: { field: "ingested", direction: "desc" },
+  });
 
   return (
     <Card>
-      <CardTitle>Your dashboard</CardTitle>
+      <CardTitle>Dashboard</CardTitle>
       <CardBody>
         <Grid>
           <GridItem md={6}>
@@ -113,11 +109,11 @@ export const MonitoringSection: React.FC = () => {
             >
               <Stack hasGutter>
                 <StackItem>
-                  <TextContent>
-                    Below is a summary of Vulnerability status for your last 10
-                    ingested SBOMs. You can click on the SBOM name to be taken
-                    to their respective details page.
-                  </TextContent>
+                  <Content>
+                    Below is a summary of Vulnerability status for the last 10
+                    ingested SBOMs. To view the details, click on an SBOM name.
+                    You can also select up to 4 SBOMs to watch.
+                  </Content>
                 </StackItem>
                 <StackItem>
                   {barchartSboms.length > 0 ? (
@@ -143,7 +139,7 @@ export const MonitoringSection: React.FC = () => {
                         legendComponent={
                           <ChartLegend
                             y={10}
-                            x={300}
+                            x={200}
                             colorScale={LEGENDS.map((legend) => {
                               const severity = severityList[legend.severity];
                               return severity.color.value;
@@ -158,10 +154,11 @@ export const MonitoringSection: React.FC = () => {
                           }
                           tickLabelComponent={
                             <ChartLabel
-                              className="pf-v5-c-button pf-m-link pf-m-inline"
+                              className="pf-v6-c-button pf-m-link pf-m-inline"
                               style={[{ fill: "#0066cc" }]}
                               events={{
                                 onClick: (event) => {
+                                  // biome-ignore lint/suspicious/noExplicitAny: allowed
                                   const sbomName = (event.target as any)
                                     .innerHTML as string | null;
                                   const sbom = barchartSboms.find(
@@ -170,10 +167,14 @@ export const MonitoringSection: React.FC = () => {
                                         generateSbomBarName(item, index) ===
                                         sbomName
                                       );
-                                    }
+                                    },
                                   );
                                   if (sbom) {
-                                    navigate(`/sboms/${sbom.id}`);
+                                    navigate(
+                                      generatePath(Paths.sbomDetails, {
+                                        sbomId: sbom.id,
+                                      }),
+                                    );
                                   }
                                 },
                               }}
@@ -213,7 +214,7 @@ export const MonitoringSection: React.FC = () => {
                                         vulnerabilityStatus: { affected },
                                       },
                                     },
-                                    index
+                                    index,
                                   ) => {
                                     const sbom = barchartSboms[index];
 
@@ -224,7 +225,7 @@ export const MonitoringSection: React.FC = () => {
                                       y: count,
                                       label: `${severityData.name}: ${count}`,
                                     };
-                                  }
+                                  },
                                 )}
                               />
                             );
@@ -233,11 +234,11 @@ export const MonitoringSection: React.FC = () => {
                       </Chart>
                     </div>
                   ) : (
-                    <EmptyState variant={EmptyStateVariant.xs}>
-                      <EmptyStateHeader
-                        titleText="There is nothing here yet"
-                        headingLevel="h4"
-                      />
+                    <EmptyState
+                      headingLevel="h4"
+                      titleText="There is nothing here yet"
+                      variant={EmptyStateVariant.xs}
+                    >
                       <EmptyStateBody>
                         You can get started by uploading an SBOM. Once your
                         SBOMs are uploaded come back to this page to see your
@@ -267,9 +268,15 @@ export const MonitoringSection: React.FC = () => {
                             {formatDateTime(barchartSboms?.[0]?.ingested)}
                           </StackItem>
                           <StackItem>
-                            <Link to={`/sboms/${barchartSboms?.[0]?.id}`}>
-                              {barchartSboms?.[0]?.name}
-                            </Link>
+                            {barchartSboms?.[0] && (
+                              <Link
+                                to={generatePath(Paths.sbomDetails, {
+                                  sbomId: barchartSboms?.[0]?.id,
+                                })}
+                              >
+                                {barchartSboms?.[0]?.name}
+                              </Link>
+                            )}
                           </StackItem>
                         </Stack>
                       </DescriptionListDescription>
@@ -297,7 +304,17 @@ export const MonitoringSection: React.FC = () => {
                           <StackItem>
                             {formatDateTime(advisories?.[0]?.ingested)}
                           </StackItem>
-                          <StackItem>{advisories?.[0]?.identifier}</StackItem>
+                          <StackItem>
+                            {advisories?.[0] && (
+                              <Link
+                                to={generatePath(Paths.advisoryDetails, {
+                                  advisoryId: advisories?.[0]?.uuid,
+                                })}
+                              >
+                                {advisories?.[0]?.document_id}
+                              </Link>
+                            )}
+                          </StackItem>
                         </Stack>
                       </DescriptionListDescription>
                     </DescriptionListGroup>

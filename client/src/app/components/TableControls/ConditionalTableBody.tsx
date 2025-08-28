@@ -1,6 +1,8 @@
-import React from "react";
+import type React from "react";
+
 import { Bullseye, Spinner } from "@patternfly/react-core";
-import { Tbody, Tr, Td } from "@patternfly/react-table";
+import { Tbody, Td, Tr } from "@patternfly/react-table";
+
 import { StateError } from "../StateError";
 import { StateNoData } from "../StateNoData";
 
@@ -25,7 +27,7 @@ export const ConditionalTableBody: React.FC<IConditionalTableBodyProps> = ({
 }) => (
   <>
     {isLoading ? (
-      <Tbody>
+      <Tbody aria-label="Table loading">
         <Tr>
           <Td colSpan={numRenderedColumns}>
             <Bullseye>
@@ -43,7 +45,7 @@ export const ConditionalTableBody: React.FC<IConditionalTableBodyProps> = ({
         </Tr>
       </Tbody>
     ) : isNoData ? (
-      <Tbody aria-label="Table error">
+      <Tbody aria-label="Table empty">
         <Tr>
           <Td colSpan={numRenderedColumns}>
             <Bullseye>{noDataEmptyState || <StateNoData />}</Bullseye>

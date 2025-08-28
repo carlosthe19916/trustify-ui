@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { generatePath, Link } from "react-router-dom";
 
 import {
   Button,
@@ -9,10 +9,9 @@ import {
   CardTitle,
   EmptyState,
   EmptyStateBody,
-  EmptyStateHeader,
   EmptyStateVariant,
   MenuToggle,
-  MenuToggleElement,
+  type MenuToggleElement,
   Select,
   SelectList,
   SelectOption,
@@ -23,9 +22,11 @@ import {
   TextInputGroupUtilities,
 } from "@patternfly/react-core";
 import TimesIcon from "@patternfly/react-icons/dist/esm/icons/times-icon";
+import text from "@patternfly/react-styles/css/utilities/Text/text";
 
 import { LoadingWrapper } from "@app/components/LoadingWrapper";
 import { useFetchSBOMById, useFetchSBOMs } from "@app/queries/sboms";
+import { Paths } from "@app/Routes";
 
 import { WatchedSbomsContext } from "../watched-sboms-context";
 import { WatchedSbomDonutChart } from "./WatchedSbomDonutChart";
@@ -35,22 +36,24 @@ interface WatchedSbomProps {
   sbomId: string | null;
 }
 
+const defaultDebounce = 500;
+
 export const WatchedSbom: React.FC<WatchedSbomProps> = ({
   fieldName,
   sbomId,
 }) => {
   const { patch } = React.useContext(WatchedSbomsContext);
 
-  const textInputRef = React.useRef<HTMLInputElement>();
+  const textInputRef = React.useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = React.useState<string>("");
   const [debouncedInputValue, setDebouncedInputValue] = React.useState("");
 
   React.useEffect(() => {
     const delayInputTimeoutId = setTimeout(() => {
       setDebouncedInputValue(inputValue);
-    }, 500);
+    }, defaultDebounce);
     return () => clearTimeout(delayInputTimeoutId);
-  }, [inputValue, 500]);
+  }, [inputValue]);
 
   const [isSelectOpen, setIsSelectOpen] = React.useState(false);
 
@@ -62,19 +65,15 @@ export const WatchedSbom: React.FC<WatchedSbomProps> = ({
 
   const {
     result: { data: sbomOptions },
-    isFetching: isFetchingSbomOptions,
-    fetchError: fetchErrorSbomOptions,
-  } = useFetchSBOMs(
-    {
-      filters: [{ field: "", operator: "~", value: debouncedInputValue }],
-      page: { pageNumber: 1, itemsPerPage: 10 },
-    },
-    true
-  );
+  } = useFetchSBOMs({
+    filters: [{ field: "", operator: "~", value: debouncedInputValue }],
+    page: { pageNumber: 1, itemsPerPage: 10 },
+    sort: { field: "ingested", direction: "desc" },
+  });
 
   const onSelectItem = (
     _event: React.MouseEvent<Element, MouseEvent> | undefined,
-    value: string | number | undefined
+    value: string | number | undefined,
   ) => {
     if (value) {
       patch(fieldName, value as string);
@@ -101,7 +100,7 @@ export const WatchedSbom: React.FC<WatchedSbomProps> = ({
 
   const onTextInputChange = (
     _event: React.FormEvent<HTMLInputElement>,
-    value: string
+    value: string,
   ) => {
     setInputValue(value);
   };
@@ -117,7 +116,11 @@ export const WatchedSbom: React.FC<WatchedSbomProps> = ({
         isFetching={isFetchingCurrentSbom}
         fetchError={fetchErrorCurrentSbom}
       >
-        {currentSbom && <CardTitle>{currentSbom?.name}</CardTitle>}
+        {currentSbom && (
+          <CardTitle className={text.textBreakWord}>
+            {currentSbom?.name}
+          </CardTitle>
+        )}
         <CardBody>
           {sbomId ? (
             <Stack>
@@ -125,15 +128,17 @@ export const WatchedSbom: React.FC<WatchedSbomProps> = ({
                 <WatchedSbomDonutChart sbomId={sbomId} />
               </StackItem>
               <StackItem>
-                <Link to={`/sboms/${sbomId}`}>View Details</Link>
+                <Link to={generatePath(Paths.sbomDetails, { sbomId })}>
+                  View Details
+                </Link>
               </StackItem>
             </Stack>
           ) : (
-            <EmptyState variant={EmptyStateVariant.xs}>
-              <EmptyStateHeader
-                titleText="There is nothing here yet"
-                headingLevel="h4"
-              />
+            <EmptyState
+              headingLevel="h4"
+              titleText="There is nothing here yet"
+              variant={EmptyStateVariant.xs}
+            >
               <EmptyStateBody>
                 You can get started by uploading an SBOM. Once your SBOMs are
                 uploaded come back to this page to change the SBOMs you would
@@ -174,12 +179,11 @@ export const WatchedSbom: React.FC<WatchedSbomProps> = ({
                   {...(!inputValue ? { style: { display: "none" } } : {})}
                 >
                   <Button
+                    icon={<TimesIcon aria-hidden />}
                     variant="plain"
                     onClick={onClearButtonClick}
                     aria-label="Clear input value"
-                  >
-                    <TimesIcon aria-hidden />
-                  </Button>
+                  />
                 </TextInputGroupUtilities>
               </TextInputGroup>
             </MenuToggle>

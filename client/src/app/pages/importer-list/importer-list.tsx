@@ -1,22 +1,24 @@
 import React from "react";
 
-import { AxiosError } from "axios";
+import type { AxiosError } from "axios";
 import dayjs from "dayjs";
 
 import {
   Button,
   ButtonVariant,
+  Content,
   Label,
   Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
   PageSection,
-  PageSectionVariants,
-  Text,
-  TextContent,
   Toolbar,
   ToolbarContent,
   ToolbarItem,
 } from "@patternfly/react-core";
 import { LogViewer, LogViewerSearch } from "@patternfly/react-log-viewer";
+import spacing from "@patternfly/react-styles/css/utilities/Spacing/spacing";
 import {
   ActionsColumn,
   Caption,
@@ -31,7 +33,7 @@ import {
 
 import {
   ConfirmDialog,
-  ConfirmDialogProps,
+  type ConfirmDialogProps,
 } from "@app/components/ConfirmDialog";
 import { NotificationsContext } from "@app/components/NotificationsContext";
 import {
@@ -43,11 +45,11 @@ import { formatDateTime, getAxiosErrorMessage } from "@app/utils/utils";
 
 import { client } from "@app/axios-config/apiInit";
 import {
+  type Importer,
+  type ImporterConfiguration,
+  type Message,
+  type SbomImporter,
   forceRunImporter,
-  Importer,
-  ImporterConfiguration,
-  Message,
-  SbomImporter,
 } from "@app/client";
 import { FilterToolbar, FilterType } from "@app/components/FilterToolbar";
 import { IconedStatus } from "@app/components/IconedStatus";
@@ -63,6 +65,21 @@ import { ANSICOLOR } from "@app/Constants";
 import { ImporterProgress } from "./components/importer-progress";
 import { ImporterStatusIcon } from "./components/importer-status-icon";
 
+type ImporterStatus = "disabled" | "scheduled" | "running";
+
+const getImporterStatus = (importer: Importer): ImporterStatus => {
+  const importerType = Object.keys(importer.configuration ?? {})[0];
+  // biome-ignore lint/suspicious/noExplicitAny: allowed
+  const configValues = (importer.configuration as any)[
+    importerType
+  ] as SbomImporter;
+  const isImporterEnabled = configValues?.disabled === false;
+  if (!isImporterEnabled) {
+    return "disabled";
+  }
+  return importer.state === "running" ? "running" : "scheduled";
+};
+
 export const ImporterList: React.FC = () => {
   const { pushNotification } = React.useContext(NotificationsContext);
 
@@ -77,23 +94,7 @@ export const ImporterList: React.FC = () => {
     setSelectedRow(row);
   };
 
-  const [refetchInterval, setRefetchInterval] = React.useState(10000);
-  const { importers, isFetching, fetchError } = useFetchImporters(
-    false,
-    refetchInterval
-  );
-
-  // Fetch importers with more frecuency in case any is "running"
-  React.useEffect(() => {
-    const isSomeTaskRunning = importers.some(
-      (item) => item.state === "running"
-    );
-    if (isSomeTaskRunning) {
-      setRefetchInterval(5000);
-    } else if (refetchInterval !== 10000) {
-      setRefetchInterval(10000);
-    }
-  }, [importers]);
+  const { importers, isFetching, fetchError } = useFetchImporters();
 
   // Enable/Disable Importer
 
@@ -106,11 +107,12 @@ export const ImporterList: React.FC = () => {
 
   const { mutate: updateImporter } = useUpdateImporterMutation(
     () => {},
-    onEnableDisableError
+    onEnableDisableError,
   );
 
   const execEnableDisableImporter = (row: Importer, enable: boolean) => {
     const importerType = Object.keys(row.configuration ?? {})[0];
+    // biome-ignore lint/suspicious/noExplicitAny: allowed
     const currentConfigValues = (row.configuration as any)[
       importerType
     ] as SbomImporter;
@@ -183,6 +185,30 @@ export const ImporterList: React.FC = () => {
         placeholderText: "Search by name...",
         getItemValue: (item) => item.name || "",
       },
+      {
+        categoryKey: "status",
+        title: "Status",
+        type: FilterType.multiselect,
+        logicOperator: "OR",
+        selectOptions: [
+          {
+            value: "scheduled",
+            label: "Scheduled",
+          },
+          {
+            value: "running",
+            label: "Running",
+          },
+          {
+            value: "disabled",
+            label: "Disabled",
+          },
+        ],
+        placeholderText: "Status",
+        matcher: (filter, item) => {
+          return filter === getImporterStatus(item);
+        },
+      },
     ],
   });
 
@@ -250,17 +276,13 @@ export const ImporterList: React.FC = () => {
 
   return (
     <>
-      <PageSection variant={PageSectionVariants.light}>
-        <TextContent>
-          <Text component="h1">Importers</Text>
-        </TextContent>
+      <PageSection hasBodyWrapper={false}>
+        <Content>
+          <Content component="h1">Importers</Content>
+        </Content>
       </PageSection>
-      <PageSection>
-        <div
-          style={{
-            backgroundColor: "var(--pf-v5-global--BackgroundColor--100)",
-          }}
-        >
+      <PageSection hasBodyWrapper={false}>
+        <div>
           <Toolbar {...toolbarProps}>
             <ToolbarContent>
               <FilterToolbar showFiltersSideBySide {...filterToolbarProps} />
@@ -295,11 +317,13 @@ export const ImporterList: React.FC = () => {
             >
               {currentPageItems?.map((item, rowIndex) => {
                 const importerType = Object.keys(item.configuration ?? {})[0];
+                // biome-ignore lint/suspicious/noExplicitAny: allowed
                 const configValues = (item.configuration as any)[
                   importerType
                 ] as SbomImporter;
-                const isImporterEnabled = configValues?.disabled === false;
 
+                const importerStatus = getImporterStatus(item);
+                const isImporterDisabled = importerStatus === "disabled";
                 return (
                   <Tbody key={item.name}>
                     <Tr {...getTrProps({ item })}>
@@ -348,30 +372,18 @@ export const ImporterList: React.FC = () => {
                           modifier="truncate"
                           {...getTdProps({ columnKey: "state" })}
                         >
-                          {item.state && isImporterEnabled ? (
-                            item.state === "running" && item.progress ? (
-                              <ImporterProgress value={item.progress} />
-                            ) : (
-                              <ImporterStatusIcon state={item.state} />
-                            )
-                          ) : (
+                          {importerStatus === "disabled" ? (
                             <Label color="orange">Disabled</Label>
+                          ) : importerStatus === "running" && item.progress ? (
+                            <ImporterProgress value={item.progress} />
+                          ) : (
+                            <ImporterStatusIcon state={item.state} />
                           )}
                         </Td>
                         <Td isActionCell>
                           <ActionsColumn
                             items={[
-                              ...(isImporterEnabled
-                                ? [
-                                    {
-                                      title: "Run",
-                                      onClick: () => {
-                                        prepareActionOnRow("run", item);
-                                      },
-                                    },
-                                  ]
-                                : []),
-                              ...(!isImporterEnabled
+                              ...(isImporterDisabled
                                 ? [
                                     {
                                       title: "Enable",
@@ -381,6 +393,13 @@ export const ImporterList: React.FC = () => {
                                     },
                                   ]
                                 : [
+                                    {
+                                      title: "Run",
+                                      onClick: () => {
+                                        prepareActionOnRow("run", item);
+                                      },
+                                      isDisabled: importerStatus === "running",
+                                    },
                                     {
                                       title: "Disable",
                                       onClick: () => {
@@ -396,7 +415,7 @@ export const ImporterList: React.FC = () => {
                     {isCellExpanded(item) ? (
                       <Tr isExpanded>
                         <Td colSpan={7}>
-                          <div className="pf-v5-u-m-md">
+                          <div className={spacing.mMd}>
                             <ExpandableRowContent>
                               <ImporterExpandedArea importer={item} />
                             </ExpandableRowContent>
@@ -412,7 +431,6 @@ export const ImporterList: React.FC = () => {
           <SimplePagination
             idPrefix="importer-table"
             isTop={false}
-            isCompact
             paginationProps={paginationProps}
           />
         </div>
@@ -462,7 +480,7 @@ const messagesToLogData = (messages: {
           title: `${groupKey.charAt(0).toUpperCase() + groupKey.slice(1)}: "${objectKey}"`,
           body: objectValue
             .map((item) => {
-              let color;
+              let color: string | null = null;
               switch (item.severity) {
                 case "none":
                   color = ANSICOLOR.green;
@@ -654,9 +672,8 @@ export const ImporterExpandedArea: React.FC<ImporterExpandedAreaProps> = ({
                     {children}
                   </Button>
                 );
-              } else {
-                return children;
               }
+              return children;
             };
 
             return (
@@ -729,39 +746,36 @@ export const ImporterExpandedArea: React.FC<ImporterExpandedAreaProps> = ({
       <SimplePagination
         idPrefix="report-table"
         isTop={false}
-        isCompact
         paginationProps={paginationProps}
       />
 
-      <Modal
-        title="Log"
-        variant="large"
-        isOpen={isLogModalOpen}
-        onClose={toggleLogModal}
-        actions={[
+      <Modal variant="large" isOpen={isLogModalOpen} onClose={toggleLogModal}>
+        <ModalHeader title="Log" />
+        <ModalBody>
+          <LogViewer
+            hasLineNumbers={false}
+            height={400}
+            data={logData}
+            theme="dark"
+            toolbar={
+              <Toolbar>
+                <ToolbarContent>
+                  <ToolbarItem>
+                    <LogViewerSearch
+                      placeholder="Search value"
+                      minSearchChars={1}
+                    />
+                  </ToolbarItem>
+                </ToolbarContent>
+              </Toolbar>
+            }
+          />
+        </ModalBody>
+        <ModalFooter>
           <Button key="cancel" variant="link" onClick={toggleLogModal}>
             Close
-          </Button>,
-        ]}
-      >
-        <LogViewer
-          hasLineNumbers={false}
-          height={400}
-          data={logData}
-          theme="dark"
-          toolbar={
-            <Toolbar>
-              <ToolbarContent>
-                <ToolbarItem>
-                  <LogViewerSearch
-                    placeholder="Search value"
-                    minSearchChars={1}
-                  />
-                </ToolbarItem>
-              </ToolbarContent>
-            </Toolbar>
-          }
-        />
+          </Button>
+        </ModalFooter>
       </Modal>
     </>
   );

@@ -1,11 +1,11 @@
-import { HubFilter, HubRequestParams } from "@app/api/models";
-import { objectKeys } from "@app/utils/utils";
+import type { HubFilter, HubRequestParams } from "@app/api/models";
 import {
-  FilterCategory,
+  type FilterCategory,
   getFilterLogicOperator,
 } from "@app/components/FilterToolbar";
-import { IFilterState } from "./useFilterState";
 import { parseInterval } from "@app/components/FilterToolbar/dateUtils";
+import { objectKeys } from "@app/utils/utils";
+import type { IFilterState } from "./useFilterState";
 
 /**
  * Helper function for getFilterHubRequestParams
@@ -14,10 +14,10 @@ import { parseInterval } from "@app/components/FilterToolbar/dateUtils";
  */
 const pushOrMergeFilter = (
   existingFilters: HubFilter[],
-  newFilter: HubFilter
+  newFilter: HubFilter,
 ) => {
   const existingFilterIndex = existingFilters.findIndex(
-    (f) => f.field === newFilter.field
+    (f) => f.field === newFilter.field,
   );
   const existingFilter =
     existingFilterIndex === -1 ? null : existingFilters[existingFilterIndex];
@@ -97,12 +97,12 @@ export const getFilterHubRequestParams = <
   const filters: HubFilter[] = [];
   if (filterState) {
     const { filterValues } = filterState;
-    objectKeys(filterValues).forEach((categoryKey) => {
+    for (const categoryKey of objectKeys(filterValues)) {
       const filterCategory = filterCategories?.find(
-        (category) => category.categoryKey === categoryKey
+        (category) => category.categoryKey === categoryKey,
       );
       const filterValue = filterValues[categoryKey];
-      if (!filterCategory || !filterValue) return;
+      if (!filterCategory || !filterValue) break;
       const serverFilterField = filterCategory.serverFilterField || categoryKey;
       const serverFilterValue =
         filterCategory.getServerFilterValue?.(filterValue) || filterValue;
@@ -112,28 +112,28 @@ export const getFilterHubRequestParams = <
       if (filterCategory.type === "numsearch" && serverFilterValue[0]) {
         pushOrMergeFilter(filters, {
           field: serverFilterField,
-          operator: "=",
+          operator: filterCategory.operator ?? "=",
           value: Number(serverFilterValue[0]),
         });
       }
       if (filterCategory.type === "search" && serverFilterValue[0]) {
         pushOrMergeFilter(filters, {
           field: serverFilterField,
-          operator: "~",
+          operator: filterCategory.operator ?? "~",
           value: serverFilterValue[0],
         });
       }
       if (filterCategory.type === "select") {
         pushOrMergeFilter(filters, {
           field: serverFilterField,
-          operator: "=",
+          operator: filterCategory.operator ?? "=",
           value: serverFilterValue[0],
         });
       }
       if (filterCategory.type === "multiselect") {
         pushOrMergeFilter(filters, {
           field: serverFilterField,
-          operator: "=",
+          operator: filterCategory.operator ?? "=",
           value: {
             list: serverFilterValue,
             operator: getFilterLogicOperator(filterCategory, "OR"),
@@ -157,10 +157,16 @@ export const getFilterHubRequestParams = <
           });
         }
       }
-    });
+      if (filterCategory.type === "autocompleteLabel") {
+        // Do nothing as labels do not follow the pattern {field}{operator}{value}
+        // It is expected for the app to add manually those fields to the REST API
+      }
+    }
   }
   if (implicitFilters) {
-    implicitFilters.forEach((filter) => filters.push(filter));
+    for (const filter of implicitFilters) {
+      filters.push(filter);
+    }
   }
   return { filters };
 };
@@ -170,8 +176,12 @@ export const getFilterHubRequestParams = <
  * - Given a string or number, returns it as a string with quotes (`"`) around it.
  * - Adds an escape character before any existing quote (`"`) characters in the string.
  */
-export const wrapInQuotesAndEscape = (value: string | number): string =>
-  `"${String(value).replace('"', '\\"')}"`;
+export const wrapAndEscape = (value: string | number): string =>
+  `${String(value)
+    .replace("=", "\\=")
+    .replace("~", "\\~")
+    .replace("<", "\\<")
+    .replace(">", "\\>")}`;
 
 /**
  * Converts a single filter object (HubFilter, the higher-level inspectable type) to the query string filter format used by the hub API
@@ -180,16 +190,12 @@ export const serializeFilterForHub = (filter: HubFilter): string => {
   const { field, operator, value } = filter;
   const joinedValue =
     typeof value === "string"
-      ? value
+      ? wrapAndEscape(value)
       : typeof value === "number"
         ? `"${value}"`
-        : `${value.list.join(value.operator === "OR" ? "|" : ",")}`;
+        : `${value.list.map(wrapAndEscape).join(value.operator === "OR" ? "|" : ",")}`;
 
-  if (!field) {
-    return joinedValue;
-  } else {
-    return `${field}${operator}${joinedValue}`;
-  }
+  return !field ? joinedValue : `${field}${operator}${joinedValue}`;
 };
 
 /**
@@ -200,7 +206,7 @@ export const serializeFilterForHub = (filter: HubFilter): string => {
  */
 export const serializeFilterRequestParamsForHub = (
   deserializedParams: HubRequestParams,
-  serializedParams: URLSearchParams
+  serializedParams: URLSearchParams,
 ) => {
   const { filters } = deserializedParams;
   if (filters) {
@@ -215,7 +221,7 @@ export const serializeFilterRequestParamsForHub = (
         })
         .sort((a, b) => a.field.localeCompare(b.field))
         .map(serializeFilterForHub)
-        .join("&")
+        .join("&"),
     );
   }
 };

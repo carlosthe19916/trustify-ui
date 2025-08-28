@@ -1,14 +1,8 @@
-import * as React from "react";
+import type * as React from "react";
 
-import {
-  Button,
-  Stack,
-  StackItem,
-  Text,
-  TextContent,
-} from "@patternfly/react-core";
+import { Button, Content, Stack, StackItem } from "@patternfly/react-core";
 
-import {
+import type {
   FilterCategory,
   FilterValue,
   IFilterValues,
@@ -31,10 +25,10 @@ export const FilterPanel = <TItem, TFilterCategoryKey extends string>({
   omitFilterCategoryKeys = [],
 }: React.PropsWithChildren<
   IFilterPanelProps<TItem, TFilterCategoryKey>
->): JSX.Element | null => {
+>): React.JSX.Element | null => {
   const setFilterValue = (
     category: FilterCategory<TItem, TFilterCategoryKey>,
-    newValue: FilterValue
+    newValue: FilterValue,
   ) => setFilterValues({ ...filterValues, [category.categoryKey]: newValue });
 
   const clearAllFilters = () => {
@@ -42,57 +36,57 @@ export const FilterPanel = <TItem, TFilterCategoryKey extends string>({
       .filter((filterCategory) => {
         return (
           omitFilterCategoryKeys.find(
-            (categoryKey) => categoryKey === filterCategory.categoryKey
+            (categoryKey) => categoryKey === filterCategory.categoryKey,
           ) === undefined
         );
       })
-      .reduce((prev, current) => {
-        return { ...prev, [current.categoryKey]: undefined };
-      }, {});
+      .reduce(
+        (prev, current) => {
+          prev[current.categoryKey] = undefined;
+          return prev;
+        },
+        {} as Record<TFilterCategoryKey, FilterValue>,
+      );
     setFilterValues({ ...filterValues, ...filtersToBeCleared });
   };
 
   return (
-    <>
-      <Stack hasGutter>
-        <StackItem>
-          <Button variant="link" isInline onClick={clearAllFilters}>
-            Clear all filters
-          </Button>
-        </StackItem>
-        {filterCategories
-          .filter((filterCategory) => {
-            return (
-              omitFilterCategoryKeys.find(
-                (categoryKey) => categoryKey === filterCategory.categoryKey
-              ) === undefined
-            );
-          })
-          .map((category) => {
-            return (
-              <StackItem key={category.categoryKey}>
-                <Stack hasGutter>
-                  <StackItem>
-                    <TextContent>
-                      <Text component="h4">{category.title}</Text>
-                    </TextContent>
-                  </StackItem>
-                  <StackItem>
-                    <FilterControl<TItem, TFilterCategoryKey>
-                      category={category}
-                      filterValue={filterValues[category.categoryKey]}
-                      setFilterValue={(newValue) =>
-                        setFilterValue(category, newValue)
-                      }
-                      isDisabled={isDisabled}
-                      isSidebar
-                    />
-                  </StackItem>
-                </Stack>
-              </StackItem>
-            );
-          })}
-      </Stack>
-    </>
+    <Stack hasGutter>
+      <StackItem>
+        <Button variant="link" isInline onClick={clearAllFilters}>
+          Clear all filters
+        </Button>
+      </StackItem>
+      {filterCategories
+        .filter((filterCategory) => {
+          return (
+            omitFilterCategoryKeys.find(
+              (categoryKey) => categoryKey === filterCategory.categoryKey,
+            ) === undefined
+          );
+        })
+        .map((category) => {
+          return (
+            <StackItem key={category.categoryKey}>
+              <Stack hasGutter>
+                <StackItem>
+                  <Content component="h4">{category.title}</Content>
+                </StackItem>
+                <StackItem>
+                  <FilterControl<TItem, TFilterCategoryKey>
+                    category={category}
+                    filterValue={filterValues[category.categoryKey]}
+                    setFilterValue={(newValue) =>
+                      setFilterValue(category, newValue)
+                    }
+                    isDisabled={isDisabled}
+                    isSidebar
+                  />
+                </StackItem>
+              </Stack>
+            </StackItem>
+          );
+        })}
+    </Stack>
   );
 };

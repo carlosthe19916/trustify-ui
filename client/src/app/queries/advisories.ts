@@ -1,20 +1,29 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AxiosError } from "axios";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 
-import { HubRequestParams } from "@app/api/models";
+import type { HubRequestParams, Label } from "@app/api/models";
 import { client } from "@app/axios-config/apiInit";
 import {
-  AdvisoryDetails,
-  AdvisorySummary,
+  type AdvisoryDetails,
+  type Labels,
   deleteAdvisory,
   downloadAdvisory,
   getAdvisory,
   listAdvisories,
+  listAdvisoryLabels,
   updateAdvisoryLabels,
 } from "@app/client";
 
 import { uploadAdvisory } from "@app/api/rest";
-import { requestParamsQuery } from "@app/hooks/table-controls";
+import {
+  labelRequestParamsQuery,
+  requestParamsQuery,
+} from "@app/hooks/table-controls";
 import { useUpload } from "@app/hooks/useUpload";
 
 export interface IAdvisoriesQueryParams {
@@ -26,19 +35,46 @@ export interface IAdvisoriesQueryParams {
 
 export const AdvisoriesQueryKey = "advisories";
 
+export const useFetchAdvisoryLabels = (filterText: string) => {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: [AdvisoriesQueryKey, "labels", filterText],
+    queryFn: () => {
+      return listAdvisoryLabels({
+        client,
+        query: { limit: 10, filter_text: filterText },
+      });
+    },
+    placeholderData: keepPreviousData,
+  });
+
+  return {
+    labels: (data?.data as { key: string; value: string }[] | undefined) || [],
+    isFetching: isLoading,
+    fetchError: error as AxiosError,
+    refetch,
+  };
+};
+
 export const useFetchAdvisories = (
   params: HubRequestParams = {},
-  refetchDisabled: boolean = false
+  labels: Label[] = [],
+  disableQuery = false,
 ) => {
+  const { q, ...rest } = requestParamsQuery(params);
+  const labelQuery = labelRequestParamsQuery(labels);
+
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: [AdvisoriesQueryKey, params],
+    queryKey: [AdvisoriesQueryKey, params, labelQuery],
     queryFn: () => {
       return listAdvisories({
         client,
-        query: { ...requestParamsQuery(params) },
+        query: {
+          ...rest,
+          q: [q, labelQuery].filter((e) => e).join("&"),
+        },
       });
     },
-    refetchInterval: !refetchDisabled ? 5000 : false,
+    enabled: !disableQuery,
   });
   return {
     result: {
@@ -67,17 +103,23 @@ export const useFetchAdvisoryById = (id: string) => {
 };
 
 export const useDeleteAdvisoryMutation = (
-  onSuccess?: (payload: AdvisoryDetails, id: string) => void,
-  onError?: (err: AxiosError, id: string) => void
+  onSuccess: (payload: AdvisoryDetails, id: string) => void,
+  onError: (err: AxiosError) => void,
 ) => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
       const response = await deleteAdvisory({ client, path: { key: id } });
       return response.data as AdvisoryDetails;
     },
-    mutationKey: [AdvisoriesQueryKey],
-    onSuccess,
-    onError,
+    onSuccess: async (response, id) => {
+      onSuccess(response, id);
+      await queryClient.invalidateQueries({ queryKey: [AdvisoriesQueryKey] });
+    },
+    onError: async (err: AxiosError) => {
+      onError(err);
+      await queryClient.invalidateQueries({ queryKey: [AdvisoriesQueryKey] });
+    },
   });
 };
 
@@ -102,8 +144,8 @@ export const useUploadAdvisory = () => {
     uploadFn: (formData, config) => {
       return uploadAdvisory(formData, config);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: [AdvisoriesQueryKey],
       });
     },
@@ -112,20 +154,20 @@ export const useUploadAdvisory = () => {
 
 export const useUpdateAdvisoryLabelsMutation = (
   onSuccess: () => void,
-  onError: (err: AxiosError, payload: AdvisorySummary) => void
+  onError: (err: AxiosError, payload: { id: string; labels: Labels }) => void,
 ) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (obj) => {
       return updateAdvisoryLabels({
         client,
-        path: { id: obj.uuid },
-        body: obj.labels ?? {},
+        path: { id: obj.id },
+        body: obj.labels,
       });
     },
-    onSuccess: (_res, _payload) => {
+    onSuccess: async (_res, _payload) => {
       onSuccess();
-      queryClient.invalidateQueries({ queryKey: [AdvisoriesQueryKey] });
+      await queryClient.invalidateQueries({ queryKey: [AdvisoriesQueryKey] });
     },
     onError: onError,
   });

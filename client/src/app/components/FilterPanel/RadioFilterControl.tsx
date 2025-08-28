@@ -1,9 +1,9 @@
-import * as React from "react";
+import type * as React from "react";
 
 import { Radio } from "@patternfly/react-core";
 
-import { ISelectFilterCategory } from "../FilterToolbar";
-import { IFilterControlProps } from "./FilterControl";
+import type { ISelectFilterCategory } from "../FilterToolbar";
+import type { IFilterControlProps } from "./FilterControl";
 
 export interface ISelectFilterControlProps<
   TItem,
@@ -19,7 +19,7 @@ export const RadioFilterControl = <TItem, TFilterCategoryKey extends string>({
   isDisabled = false,
 }: React.PropsWithChildren<
   ISelectFilterControlProps<TItem, TFilterCategoryKey>
->): JSX.Element | null => {
+>): React.JSX.Element | null => {
   const getOptionFromOptionValue = (optionValue: string) =>
     category.selectOptions.find(({ value }) => value === optionValue);
 
@@ -30,25 +30,23 @@ export const RadioFilterControl = <TItem, TFilterCategoryKey extends string>({
 
   return (
     <>
-      {category.selectOptions.map(
-        ({ label, value, optionProps = {} }, index) => {
-          const isSelected = filterValue?.includes(value) || false;
-          return (
-            <Radio
-              isDisabled={isDisabled}
-              key={index}
-              id={`radio-${index}`}
-              name="radio"
-              isLabelWrapped
-              label={label}
-              isChecked={isSelected}
-              onChange={() => {
-                onFilterSelect(value as string);
-              }}
-            />
-          );
-        }
-      )}
+      {category.selectOptions.map(({ label, value }, index) => {
+        const isSelected = filterValue?.includes(value) || false;
+        return (
+          <Radio
+            isDisabled={isDisabled}
+            key={label}
+            id={`radio-${index}`}
+            name="radio"
+            isLabelWrapped
+            label={label}
+            isChecked={isSelected}
+            onChange={() => {
+              onFilterSelect(value as string);
+            }}
+          />
+        );
+      })}
     </>
   );
 };

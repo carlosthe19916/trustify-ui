@@ -6,20 +6,26 @@
   "type": "module",
   "scripts": {
     "clean": "rimraf ./dist",
-    "lint": "eslint .",
-    "build": "NODE_ENV=production rollup -c",
-    "start:dev": "NODE_ENV=development ROLLUP_RUN=true rollup -c -w",
+    "clean:all": "rimraf ./dist ./node_modules",
+    "check": "biome check --error-on-warnings .",
+    "check:write": "biome check --write .",
+    "format": "biome format .",
+    "format:fix": "biome format --write .",
+    "prebuild": "npm run clean",
+    "build": "cross-env NODE_ENV=production rollup -c",
+    "start:dev": "cross-env NODE_ENV=development ROLLUP_RUN=true rollup -c -w",
     "start": "npm run build && node --enable-source-maps dist/index.js"
   },
-  "lint-staged": {
-    "*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}": "eslint --fix",
-    "*.{css,json,md,yaml,yml}": "prettier --write"
-  },
   "dependencies": {
+    "cookie": "^1.0.2",
     "cookie-parser": "^1.4.6",
     "ejs": "^3.1.10",
-    "express": "^4.19.2",
-    "http-proxy-middleware": "^2.0.6",
+    "express": "^5.1.0",
+    "http-proxy-middleware": "^3.0.5",
     "http-terminator": "^3.2.0"
+  },
+  "devDependencies": {
+    "@types/ejs": "^3.1.5",
+    "@types/express": "^5.0.3"
   }
 }

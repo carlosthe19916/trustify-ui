@@ -10,6 +10,12 @@ const config: JestConfigWithTsJest = {
   // Indicates whether the coverage information should be collected while executing the test
   collectCoverage: false,
 
+  collectCoverageFrom: [
+    "**/*.{ts,js,cjs,mjs}",
+    "!**/node_modules/**",
+    "!**/coverage/**",
+  ],
+
   // The directory where Jest should output its coverage files
   coverageDirectory: "coverage",
 
@@ -51,7 +57,12 @@ const config: JestConfigWithTsJest = {
 
   // Process js/jsx/mjs/mjsx/ts/tsx/mts/mtsx with `ts-jest`
   transform: {
-    "^.+\\.(js|mjs|ts|mts)x?$": "ts-jest",
+    "^.+\\.(js|mjs|ts|mts)x?$": [
+      "ts-jest",
+      {
+        tsconfig: "tsconfig.json", // 👈 Use custom tsconfig here
+      },
+    ],
   },
 };
 

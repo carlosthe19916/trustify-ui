@@ -1,6 +1,10 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { generatePath, NavLink } from "react-router-dom";
 
+import { Modal, ModalBody, ModalHeader } from "@patternfly/react-core";
+import type { AxiosError } from "axios";
+
+import { ButtonVariant } from "@patternfly/react-core";
 import {
   ActionsColumn,
   Table,
@@ -11,21 +15,41 @@ import {
   Tr,
 } from "@patternfly/react-table";
 
+import { joinKeyValueAsString } from "@app/api/model-utils";
+import type { SbomSummary } from "@app/client";
+import { ConfirmDialog } from "@app/components/ConfirmDialog";
+import { LabelsAsList } from "@app/components/LabelsAsList";
+import { NotificationsContext } from "@app/components/NotificationsContext";
 import { SimplePagination } from "@app/components/SimplePagination";
 import {
   ConditionalTableBody,
   TableHeaderContentWithControls,
   TableRowContentWithControls,
 } from "@app/components/TableControls";
+import {
+  sbomDeletedErrorMessage,
+  sbomDeleteDialogProps,
+  sbomDeletedSuccessMessage,
+} from "@app/Constants";
 import { useDownload } from "@app/hooks/domain-controls/useDownload";
+import { useDeleteSbomMutation } from "@app/queries/sboms";
+import { Paths } from "@app/Routes";
 import { formatDate } from "@app/utils/utils";
 
+import { SBOMEditLabelsForm } from "./components/SBOMEditLabelsForm";
 import { SBOMVulnerabilities } from "./components/SbomVulnerabilities";
 import { SbomSearchContext } from "./sbom-context";
 
-export const SbomTable: React.FC = ({}) => {
+export const SbomTable: React.FC = () => {
+  const { pushNotification } = React.useContext(NotificationsContext);
+
   const { isFetching, fetchError, totalItemCount, tableControls } =
     React.useContext(SbomSearchContext);
+
+  const [editLabelsModalState, setEditLabelsModalState] =
+    React.useState<SbomSummary | null>(null);
+  const isEditLabelsModalOpen = editLabelsModalState !== null;
+  const rowLabelsToUpdate = editLabelsModalState;
 
   const {
     numRenderedColumns,
@@ -38,9 +62,38 @@ export const SbomTable: React.FC = ({}) => {
       getTdProps,
     },
     expansionDerivedState: { isCellExpanded },
+    filterState: { filterValues, setFilterValues },
   } = tableControls;
 
-  const { downloadSBOM } = useDownload();
+  const { downloadSBOM, downloadSBOMLicenses } = useDownload();
+
+  const closeEditLabelsModal = () => {
+    setEditLabelsModalState(null);
+  };
+
+  // Delete action
+
+  const [sbomToDelete, setSbomToDelete] = React.useState<SbomSummary | null>(
+    null,
+  );
+
+  const onDeleteSbomSuccess = (sbom: SbomSummary) => {
+    setSbomToDelete(null);
+    pushNotification({
+      title: sbomDeletedSuccessMessage(sbom),
+      variant: "success",
+    });
+  };
+
+  const onDeleteAdvisoryError = (error: AxiosError) => {
+    pushNotification({
+      title: sbomDeletedErrorMessage(error),
+      variant: "danger",
+    });
+  };
+
+  const { mutate: deleteSbom, isPending: isDeletingSbom } =
+    useDeleteSbomMutation(onDeleteSbomSuccess, onDeleteAdvisoryError);
 
   return (
     <>
@@ -51,6 +104,7 @@ export const SbomTable: React.FC = ({}) => {
               <Th {...getThProps({ columnKey: "name" })} />
               <Th {...getThProps({ columnKey: "version" })} />
               <Th {...getThProps({ columnKey: "supplier" })} />
+              <Th {...getThProps({ columnKey: "labels" })} />
               <Th {...getThProps({ columnKey: "published" })} />
               <Th {...getThProps({ columnKey: "packages" })} />
               <Th {...getThProps({ columnKey: "vulnerabilities" })} />
@@ -73,7 +127,8 @@ export const SbomTable: React.FC = ({}) => {
                     rowIndex={rowIndex}
                   >
                     <Td
-                      width={25}
+                      width={20}
+                      modifier="breakWord"
                       {...getTdProps({
                         columnKey: "name",
                         isCompoundExpandToggle: true,
@@ -81,10 +136,16 @@ export const SbomTable: React.FC = ({}) => {
                         rowIndex,
                       })}
                     >
-                      <NavLink to={`/sboms/${item.id}`}>{item.name}</NavLink>
+                      <NavLink
+                        to={generatePath(Paths.sbomDetails, {
+                          sbomId: item.id,
+                        })}
+                      >
+                        {item.name}
+                      </NavLink>
                     </Td>
                     <Td
-                      width={15}
+                      width={10}
                       modifier="truncate"
                       {...getTdProps({ columnKey: "version" })}
                     >
@@ -94,13 +155,44 @@ export const SbomTable: React.FC = ({}) => {
                         .join(", ")}
                     </Td>
                     <Td
-                      width={20}
+                      width={10}
                       modifier="truncate"
                       {...getTdProps({ columnKey: "supplier" })}
                     >
-                      {item.authors.join(", ")}
+                      {item.suppliers.join(", ")}
                     </Td>
-                    <Td width={10} {...getTdProps({ columnKey: "published" })}>
+                    <Td
+                      width={20}
+                      modifier="truncate"
+                      {...getTdProps({ columnKey: "labels" })}
+                    >
+                      <LabelsAsList
+                        value={item.labels}
+                        onClick={({ key, value }) => {
+                          const labelString = joinKeyValueAsString({
+                            key,
+                            value,
+                          });
+
+                          const filterValue = filterValues.labels;
+                          if (!filterValue?.includes(labelString)) {
+                            const newFilterValue = filterValue
+                              ? [...filterValue, labelString]
+                              : [labelString];
+
+                            setFilterValues({
+                              ...filterValues,
+                              labels: newFilterValue,
+                            });
+                          }
+                        }}
+                      />
+                    </Td>
+                    <Td
+                      width={10}
+                      modifier="truncate"
+                      {...getTdProps({ columnKey: "published" })}
+                    >
                       {formatDate(item.published)}
                     </Td>
                     <Td width={10} {...getTdProps({ columnKey: "packages" })}>
@@ -116,9 +208,33 @@ export const SbomTable: React.FC = ({}) => {
                       <ActionsColumn
                         items={[
                           {
-                            title: "Download",
+                            title: "Edit labels",
+                            onClick: () => {
+                              setEditLabelsModalState(item);
+                            },
+                          },
+                          {
+                            isSeparator: true,
+                          },
+                          {
+                            title: "Download SBOM",
                             onClick: () => {
                               downloadSBOM(item.id, `${item.name}.json`);
+                            },
+                          },
+                          {
+                            title: "Download License Report",
+                            onClick: () => {
+                              downloadSBOMLicenses(item.id);
+                            },
+                          },
+                          {
+                            isSeparator: true,
+                          },
+                          {
+                            title: "Delete",
+                            onClick: () => {
+                              setSbomToDelete(item);
                             },
                           },
                         ]}
@@ -134,8 +250,40 @@ export const SbomTable: React.FC = ({}) => {
       <SimplePagination
         idPrefix="sbom-table"
         isTop={false}
-        isCompact
         paginationProps={paginationProps}
+      />
+
+      <Modal
+        isOpen={isEditLabelsModalOpen}
+        variant="medium"
+        onClose={closeEditLabelsModal}
+      >
+        <ModalHeader title="Edit labels" />
+        <ModalBody>
+          {rowLabelsToUpdate && (
+            <SBOMEditLabelsForm
+              sbom={rowLabelsToUpdate}
+              onClose={closeEditLabelsModal}
+            />
+          )}
+        </ModalBody>
+      </Modal>
+
+      <ConfirmDialog
+        {...sbomDeleteDialogProps(sbomToDelete)}
+        inProgress={isDeletingSbom}
+        titleIconVariant="warning"
+        isOpen={!!sbomToDelete}
+        confirmBtnVariant={ButtonVariant.danger}
+        confirmBtnLabel="Delete"
+        cancelBtnLabel="Cancel"
+        onCancel={() => setSbomToDelete(null)}
+        onClose={() => setSbomToDelete(null)}
+        onConfirm={() => {
+          if (sbomToDelete) {
+            deleteSbom(sbomToDelete.id);
+          }
+        }}
       />
     </>
   );

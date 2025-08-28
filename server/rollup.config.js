@@ -1,14 +1,17 @@
 /* eslint-env node */
 
+import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
 import nodeResolve from "@rollup/plugin-node-resolve";
-import commonjs from "@rollup/plugin-commonjs";
 import run from "@rollup/plugin-run";
 
 const buildAndRun = process.env?.ROLLUP_RUN === "true";
 
+/** @type {import('rollup').RollupOptions} */
 export default {
-  input: "src/index.js",
+  strictDeprecations: true,
+
+  input: "src/index.ts",
   output: {
     file: "dist/index.js",
     format: "esm",

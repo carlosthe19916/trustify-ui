@@ -3,7 +3,7 @@ import { User, UserManager } from "oidc-client-ts";
 
 import { OIDC_CLIENT_ID, OIDC_SERVER_URL, oidcClientSettings } from "@app/oidc";
 
-import { createClient } from "@hey-api/client-axios";
+import { createClient } from "@app/client/client";
 
 export const client = createClient({
   // set default base url for requests
@@ -14,7 +14,7 @@ export const client = createClient({
 
 function getUser() {
   const oidcStorage = sessionStorage.getItem(
-    `oidc.user:${OIDC_SERVER_URL}:${OIDC_CLIENT_ID}`
+    `oidc.user:${OIDC_SERVER_URL}:${OIDC_CLIENT_ID}`,
   );
   if (!oidcStorage) {
     return null;
@@ -35,7 +35,7 @@ export const initInterceptors = () => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   axios.interceptors.response.use(
@@ -66,12 +66,12 @@ export const initInterceptors = () => {
               retryCounter: retryCounter + 1,
             });
           }
-        } catch (refreshError) {
+        } catch (_refreshError) {
           await userManager.signoutRedirect();
         }
       }
 
       return Promise.reject(error);
-    }
+    },
   );
 };

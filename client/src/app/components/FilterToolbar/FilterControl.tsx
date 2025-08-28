@@ -1,17 +1,18 @@
-import * as React from "react";
+import type * as React from "react";
 
-import {
-  FilterCategory,
-  FilterValue,
-  FilterType,
-  ISelectFilterCategory,
-  ISearchFilterCategory,
-  IMultiselectFilterCategory,
-} from "./FilterToolbar";
-import { SelectFilterControl } from "./SelectFilterControl";
-import { SearchFilterControl } from "./SearchFilterControl";
-import { MultiselectFilterControl } from "./MultiselectFilterControl";
+import { AutocompleteLabelFilterControl } from "./AutocompleteLabelFilterControl";
 import { DateRangeFilter } from "./DateRangeFilter";
+import {
+  type FilterCategory,
+  FilterType,
+  type FilterValue,
+  type IMultiselectFilterCategory,
+  type ISearchFilterCategory,
+  type ISelectFilterCategory,
+} from "./FilterToolbar";
+import { MultiselectFilterControl } from "./MultiselectFilterControl";
+import { SearchFilterControl } from "./SearchFilterControl";
+import { SelectFilterControl } from "./SelectFilterControl";
 
 export interface IFilterControlProps<TItem, TFilterCategoryKey extends string> {
   category: FilterCategory<TItem, TFilterCategoryKey>;
@@ -26,7 +27,7 @@ export const FilterControl = <TItem, TFilterCategoryKey extends string>({
   ...props
 }: React.PropsWithChildren<
   IFilterControlProps<TItem, TFilterCategoryKey>
->): JSX.Element | null => {
+>): React.JSX.Element | null => {
   if (category.type === FilterType.select) {
     return (
       <SelectFilterControl
@@ -61,6 +62,16 @@ export const FilterControl = <TItem, TFilterCategoryKey extends string>({
   }
   if (category.type === FilterType.dateRange) {
     return <DateRangeFilter category={category} {...props} />;
+  }
+  if (category.type === FilterType.autocompleteLabel) {
+    return (
+      <AutocompleteLabelFilterControl
+        category={
+          category as IMultiselectFilterCategory<TItem, TFilterCategoryKey>
+        }
+        {...props}
+      />
+    );
   }
   return null;
 };

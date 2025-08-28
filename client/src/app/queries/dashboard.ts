@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AxiosError } from "axios";
+import type { AxiosError } from "axios";
 
-import { WatchedSboms } from "@app/api/models";
+import type { WatchedSboms } from "@app/api/models";
 import { client } from "@app/axios-config/apiInit";
 import { getUserPreferences, setUserPreferences } from "@app/client";
 
@@ -43,7 +43,7 @@ export const useFetchWatchedSboms = () => {
 
 export const useUpdateWatchedSbomsMutation = (
   onSuccess: () => void,
-  onError: (err: AxiosError, payload: WatchedSboms) => void
+  onError: (err: AxiosError, payload: WatchedSboms) => void,
 ) => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -54,9 +54,9 @@ export const useUpdateWatchedSbomsMutation = (
         body: obj,
       });
     },
-    onSuccess: (_res, _payload) => {
+    onSuccess: async (_res, _payload) => {
       onSuccess();
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: [DashboardQueryKey, WATCHED_SBOMS_KEY],
       });
     },

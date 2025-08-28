@@ -1,13 +1,14 @@
 import * as React from "react";
+
 import {
   Dropdown,
-  DropdownItem,
   DropdownGroup,
+  DropdownItem,
   DropdownList,
   MenuToggle,
-  SelectOptionProps,
-  ToolbarToggleGroup,
+  type SelectOptionProps,
   ToolbarItem,
+  ToolbarToggleGroup,
 } from "@patternfly/react-core";
 import FilterIcon from "@patternfly/react-icons/dist/esm/icons/filter-icon";
 
@@ -19,6 +20,7 @@ export enum FilterType {
   search = "search",
   numsearch = "numsearch",
   dateRange = "dateRange",
+  autocompleteLabel = "autocompleteLabel",
 }
 
 export type FilterValue = string[] | undefined | null;
@@ -55,6 +57,10 @@ export interface IBasicFilterCategory<
   getServerFilterValue?: (filterValue: FilterValue) => string[] | undefined;
   /** For client side filtering, provide custom algorithm for testing if the value of `TItem` matches the filter value. */
   matcher?: (filter: string, item: TItem) => boolean;
+  /**
+   * Main operator for filter value. Defaults depends on the implementation of each categorykey
+   */
+  operator?: "=" | "!=" | "~" | ">" | ">=" | "<" | "<=";
 }
 
 export interface IMultiselectFilterCategory<
@@ -62,13 +68,13 @@ export interface IMultiselectFilterCategory<
   TFilterCategoryKey extends string,
 > extends IBasicFilterCategory<TItem, TFilterCategoryKey> {
   /** The full set of options to select from for this filter. */
-  selectOptions:
-    | FilterSelectOptionProps[]
-    | Record<string, FilterSelectOptionProps[]>;
+  selectOptions: FilterSelectOptionProps[];
   /** Option search input field placeholder text. */
   placeholderText?: string;
   /** How to connect multiple selected options together. Defaults to "AND". */
   logicOperator?: "AND" | "OR";
+  // Callback for the InputText. Use React.callback to avoid re-rendering
+  onInputValueChange?: (value: string) => void;
 }
 
 export interface ISelectFilterCategory<TItem, TFilterCategoryKey extends string>
@@ -96,7 +102,7 @@ export const getFilterLogicOperator = <
   TFilterCategoryKey extends string,
 >(
   filterCategory?: FilterCategory<TItem, TFilterCategoryKey>,
-  defaultOperator: "AND" | "OR" = "OR"
+  defaultOperator: "AND" | "OR" = "OR",
 ) =>
   (filterCategory &&
     (filterCategory as IMultiselectFilterCategory<TItem, TFilterCategoryKey>)
@@ -107,9 +113,9 @@ export interface IFilterToolbarProps<TItem, TFilterCategoryKey extends string> {
   filterCategories: FilterCategory<TItem, TFilterCategoryKey>[];
   filterValues: IFilterValues<TFilterCategoryKey>;
   setFilterValues: (values: IFilterValues<TFilterCategoryKey>) => void;
-  beginToolbarItems?: JSX.Element;
-  endToolbarItems?: JSX.Element;
-  pagination?: JSX.Element;
+  beginToolbarItems?: React.JSX.Element;
+  endToolbarItems?: React.JSX.Element;
+  pagination?: React.JSX.Element;
   showFiltersSideBySide?: boolean;
   isDisabled?: boolean;
 }
@@ -123,14 +129,14 @@ export const FilterToolbar = <TItem, TFilterCategoryKey extends string>({
   isDisabled = false,
 }: React.PropsWithChildren<
   IFilterToolbarProps<TItem, TFilterCategoryKey>
->): JSX.Element | null => {
+>): React.JSX.Element | null => {
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] =
     React.useState(false);
   const [currentFilterCategoryKey, setCurrentFilterCategoryKey] =
     React.useState(filterCategories[0].categoryKey);
 
   const onCategorySelect = (
-    category: FilterCategory<TItem, TFilterCategoryKey>
+    category: FilterCategory<TItem, TFilterCategoryKey>,
   ) => {
     setCurrentFilterCategoryKey(category.categoryKey);
     setIsCategoryDropdownOpen(false);
@@ -138,20 +144,19 @@ export const FilterToolbar = <TItem, TFilterCategoryKey extends string>({
 
   const setFilterValue = (
     category: FilterCategory<TItem, TFilterCategoryKey>,
-    newValue: FilterValue
+    newValue: FilterValue,
   ) => setFilterValues({ ...filterValues, [category.categoryKey]: newValue });
 
   const currentFilterCategory = filterCategories.find(
-    (category) => category.categoryKey === currentFilterCategoryKey
+    (category) => category.categoryKey === currentFilterCategoryKey,
   );
 
-  const filterGroups = filterCategories.reduce(
-    (groups, category) =>
-      !category.filterGroup || groups.includes(category.filterGroup)
-        ? groups
-        : [...groups, category.filterGroup],
-    [] as string[]
-  );
+  const filterGroups = filterCategories.reduce((groups, category) => {
+    if (category.filterGroup && !groups.includes(category.filterGroup)) {
+      groups.push(category.filterGroup);
+    }
+    return groups;
+  }, [] as string[]);
 
   const renderDropdownItems = () => {
     if (filterGroups.length) {
@@ -160,7 +165,7 @@ export const FilterToolbar = <TItem, TFilterCategoryKey extends string>({
           <DropdownList>
             {filterCategories
               .filter(
-                (filterCategory) => filterCategory.filterGroup === filterGroup
+                (filterCategory) => filterCategory.filterGroup === filterGroup,
               )
               .map((filterCategory) => {
                 return (
@@ -176,17 +181,17 @@ export const FilterToolbar = <TItem, TFilterCategoryKey extends string>({
           </DropdownList>
         </DropdownGroup>
       ));
-    } else {
-      return filterCategories.map((category) => (
-        <DropdownItem
-          id={`filter-category-${category.categoryKey}`}
-          key={category.categoryKey}
-          onClick={() => onCategorySelect(category)}
-        >
-          {category.title}
-        </DropdownItem>
-      ));
     }
+
+    return filterCategories.map((category) => (
+      <DropdownItem
+        id={`filter-category-${category.categoryKey}`}
+        key={category.categoryKey}
+        onClick={() => onCategorySelect(category)}
+      >
+        {category.title}
+      </DropdownItem>
+    ));
   };
 
   return (
@@ -195,9 +200,7 @@ export const FilterToolbar = <TItem, TFilterCategoryKey extends string>({
         variant="filter-group"
         toggleIcon={<FilterIcon />}
         breakpoint="2xl"
-        spaceItems={
-          showFiltersSideBySide ? { default: "spaceItemsMd" } : undefined
-        }
+        gap={showFiltersSideBySide ? { default: "gapMd" } : undefined}
       >
         {!showFiltersSideBySide && (
           <ToolbarItem>

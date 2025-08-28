@@ -1,21 +1,24 @@
 import React from "react";
 
-import { AxiosError } from "axios";
+import type { AxiosError } from "axios";
 
-import { SbomSummary } from "@app/client";
-import { FilterType } from "@app/components/FilterToolbar";
 import {
   FILTER_TEXT_CATEGORY_KEY,
   TablePersistenceKeyPrefixes,
 } from "@app/Constants";
 import {
+  joinKeyValueAsString,
+  splitStringAsKeyValue,
+} from "@app/api/model-utils";
+import type { SbomSummary } from "@app/client";
+import { FilterType } from "@app/components/FilterToolbar";
+import {
+  type ITableControls,
   getHubRequestParams,
-  ITableControls,
   useTableControlProps,
   useTableControlState,
 } from "@app/hooks/table-controls";
-import { useSelectionState } from "@app/hooks/useSelectionState";
-import { useFetchSBOMs } from "@app/queries/sboms";
+import { useFetchSBOMLabels, useFetchSBOMs } from "@app/queries/sboms";
 
 interface ISbomSearchContext {
   tableControls: ITableControls<
@@ -25,9 +28,10 @@ interface ISbomSearchContext {
     | "packages"
     | "published"
     | "supplier"
+    | "labels"
     | "vulnerabilities",
     "name" | "published",
-    "" | "published",
+    "" | "published" | "labels",
     string
   >;
 
@@ -48,6 +52,18 @@ interface ISbomProvider {
 export const SbomSearchProvider: React.FunctionComponent<ISbomProvider> = ({
   children,
 }) => {
+  const [inputValue, setInputValue] = React.useState("");
+  const [debouncedInputValue, setDebouncedInputValue] = React.useState("");
+
+  React.useEffect(() => {
+    const delayInputTimeoutId = setTimeout(() => {
+      setDebouncedInputValue(inputValue);
+    }, 400);
+    return () => clearTimeout(delayInputTimeoutId);
+  }, [inputValue]);
+
+  const { labels } = useFetchSBOMLabels(debouncedInputValue);
+
   const tableControlState = useTableControlState({
     tableName: "sbom",
     persistenceKeyPrefix: TablePersistenceKeyPrefixes.sboms,
@@ -56,6 +72,7 @@ export const SbomSearchProvider: React.FunctionComponent<ISbomProvider> = ({
       name: "Name",
       version: "Version",
       supplier: "Supplier",
+      labels: "Labels",
       published: "Created on",
       packages: "Dependencies",
       vulnerabilities: "Vulnerabilities",
@@ -76,6 +93,20 @@ export const SbomSearchProvider: React.FunctionComponent<ISbomProvider> = ({
         title: "Created on",
         type: FilterType.dateRange,
       },
+      {
+        categoryKey: "labels",
+        title: "Label",
+        type: FilterType.autocompleteLabel,
+        placeholderText: "Filter results by label",
+        selectOptions: labels.map((e) => {
+          const keyValue = joinKeyValueAsString({ key: e.key, value: e.value });
+          return {
+            value: keyValue,
+            label: keyValue,
+          };
+        }),
+        onInputValueChange: setInputValue,
+      },
     ],
     isExpansionEnabled: false,
   });
@@ -91,7 +122,10 @@ export const SbomSearchProvider: React.FunctionComponent<ISbomProvider> = ({
         name: "name",
         published: "published",
       },
-    })
+    }),
+    (tableControlState.filterState.filterValues.labels ?? []).map((label) =>
+      splitStringAsKeyValue(label),
+    ),
   );
 
   const tableControls = useTableControlProps({
@@ -100,10 +134,6 @@ export const SbomSearchProvider: React.FunctionComponent<ISbomProvider> = ({
     currentPageItems: advisories,
     totalItemCount,
     isLoading: isFetching,
-    selectionState: useSelectionState({
-      items: advisories,
-      isEqual: (a, b) => a.id === b.id,
-    }),
   });
 
   return (

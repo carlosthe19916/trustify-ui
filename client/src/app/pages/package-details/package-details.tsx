@@ -1,20 +1,25 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  Content,
   Flex,
   FlexItem,
   PageSection,
+  Popover,
   Stack,
   StackItem,
   Tab,
+  TabAction,
   TabContent,
-  Tabs,
   TabTitleText,
-  Text,
-  TextContent,
+  Tabs,
 } from "@patternfly/react-core";
+import HelpIcon from "@patternfly/react-icons/dist/esm/icons/help-icon";
 
-import { PathParam, useRouteParams } from "@app/Routes";
+import { PathParam, Paths, useRouteParams } from "@app/Routes";
 import { LoadingWrapper } from "@app/components/LoadingWrapper";
 import { PackageQualifiers } from "@app/components/PackageQualifiers";
 import { useFetchPackageById } from "@app/queries/packages";
@@ -35,8 +40,8 @@ export const PackageDetails: React.FC = () => {
   const [activeTabKey, setActiveTabKey] = React.useState<string | number>(0);
 
   const handleTabClick = (
-    event: React.MouseEvent<any> | React.KeyboardEvent | MouseEvent,
-    tabIndex: string | number
+    _event: React.MouseEvent | React.KeyboardEvent | MouseEvent,
+    tabIndex: string | number,
   ) => {
     setActiveTabKey(tabIndex);
   };
@@ -44,16 +49,26 @@ export const PackageDetails: React.FC = () => {
   const vulnerabilitiesTabRef = React.createRef<HTMLElement>();
   const sbomsTabRef = React.createRef<HTMLElement>();
 
+  const sbomsPopupRef = React.createRef<HTMLElement>();
+
   return (
     <>
-      <PageSection variant="light">
+      <PageSection type="breadcrumb">
+        <Breadcrumb>
+          <BreadcrumbItem>
+            <Link to={Paths.packages}>Packages</Link>
+          </BreadcrumbItem>
+          <BreadcrumbItem isActive>Package details</BreadcrumbItem>
+        </Breadcrumb>
+      </PageSection>
+      <PageSection>
         <Stack>
           <StackItem>
-            <TextContent>
-              <Text component="h1">
+            <Content>
+              <Content component="h1">
                 {decomposedPurl?.name ?? packageId ?? ""}
-              </Text>
-            </TextContent>
+              </Content>
+            </Content>
           </StackItem>
           <StackItem>
             <Flex>
@@ -69,7 +84,7 @@ export const PackageDetails: React.FC = () => {
           </StackItem>
         </Stack>
       </PageSection>
-      <PageSection type="nav">
+      <PageSection>
         <Tabs
           mountOnEnter
           activeKey={activeTabKey}
@@ -86,6 +101,17 @@ export const PackageDetails: React.FC = () => {
           <Tab
             eventKey={1}
             title={<TabTitleText>SBOMs using package</TabTitleText>}
+            actions={
+              <>
+                <TabAction ref={sbomsPopupRef}>
+                  <HelpIcon />
+                </TabAction>
+                <Popover
+                  bodyContent={<div>A list of SBOMs using this package.</div>}
+                  triggerRef={sbomsPopupRef}
+                />
+              </>
+            }
             tabContentId="refTabSbomsSection"
             tabContentRef={sbomsTabRef}
           />

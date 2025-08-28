@@ -1,6 +1,6 @@
-import { DiscriminatedArgs } from "@app/utils/type-utils";
-import { IFeaturePersistenceArgs } from "..";
 import { usePersistentState } from "@app/hooks/usePersistentState";
+import type { DiscriminatedArgs } from "@app/utils/type-utils";
+import { type IFeaturePersistenceArgs, isPersistenceProvider } from "..";
 
 /**
  * The currently applied sort parameters
@@ -69,7 +69,7 @@ export const useSortState = <
   TPersistenceKeyPrefix extends string = string,
 >(
   args: ISortStateArgs<TSortableColumnKey> &
-    IFeaturePersistenceArgs<TPersistenceKeyPrefix>
+    IFeaturePersistenceArgs<TPersistenceKeyPrefix>,
 ): ISortState<TSortableColumnKey> => {
   const { isSortEnabled, persistTo = "state", persistenceKeyPrefix } = args;
   const sortableColumns = (isSortEnabled && args.sortableColumns) || [];
@@ -96,7 +96,9 @@ export const useSortState = <
       ? {
           persistTo,
           keys: ["sortColumn", "sortDirection"],
-          serialize: (activeSort) => ({
+          serialize: (
+            activeSort: Partial<IActiveSort<TSortableColumnKey> | null>,
+          ) => ({
             sortColumn: activeSort?.columnKey || null,
             sortDirection: activeSort?.direction || null,
           }),
@@ -113,7 +115,14 @@ export const useSortState = <
             persistTo,
             key: "sort",
           }
-        : { persistTo }),
+        : isPersistenceProvider(persistTo)
+          ? {
+              persistTo: "provider",
+              serialize: persistTo.write,
+              deserialize: () =>
+                persistTo.read() as IActiveSort<TSortableColumnKey> | null,
+            }
+          : { persistTo: "state" }),
   });
   return { activeSort, setActiveSort };
 };

@@ -1,10 +1,22 @@
 import React from "react";
+import { Link } from "react-router-dom";
+
+import type { AxiosError } from "axios";
 
 import {
-  Button,
+  Breadcrumb,
+  BreadcrumbItem,
+  ButtonVariant,
+  Content,
+  Divider,
+  Dropdown,
+  DropdownItem,
+  DropdownList,
   Flex,
   FlexItem,
   Label,
+  MenuToggle,
+  type MenuToggleElement,
   PageSection,
   Popover,
   Split,
@@ -14,55 +26,104 @@ import {
   TabContent,
   Tabs,
   TabTitleText,
-  Text,
-  TextContent,
 } from "@patternfly/react-core";
-import DownloadIcon from "@patternfly/react-icons/dist/esm/icons/download-icon";
 import HelpIcon from "@patternfly/react-icons/dist/esm/icons/help-icon";
 
-import { PathParam, useRouteParams } from "@app/Routes";
-
+import {
+  sbomDeletedErrorMessage,
+  sbomDeleteDialogProps,
+  sbomDeletedSuccessMessage,
+} from "@app/Constants";
+import { PathParam, Paths, useRouteParams } from "@app/Routes";
+import type { SbomSummary } from "@app/client";
+import { ConfirmDialog } from "@app/components/ConfirmDialog";
 import { LoadingWrapper } from "@app/components/LoadingWrapper";
+import { NotificationsContext } from "@app/components/NotificationsContext";
 import { useDownload } from "@app/hooks/domain-controls/useDownload";
-import { useFetchSBOMById } from "@app/queries/sboms";
+import { useDeleteSbomMutation, useFetchSBOMById } from "@app/queries/sboms";
 
+import { useNavigate } from "react-router-dom";
 import { Overview } from "./overview";
 import { PackagesBySbom } from "./packages-by-sbom";
 import { VulnerabilitiesBySbom } from "./vulnerabilities-by-sbom";
 
 export const SbomDetails: React.FC = () => {
-  const [activeTabKey, setActiveTabKey] = React.useState<string | number>(0);
+  const navigate = useNavigate();
+  const { pushNotification } = React.useContext(NotificationsContext);
 
-  const handleTabClick = (
-    event: React.MouseEvent<any> | React.KeyboardEvent | MouseEvent,
-    tabIndex: string | number
-  ) => {
-    setActiveTabKey(tabIndex);
+  const sbomId = useRouteParams(PathParam.SBOM_ID);
+  const { sbom, isFetching, fetchError } = useFetchSBOMById(sbomId);
+
+  // Actions Dropdown
+  const [isActionsDropdownOpen, setIsActionsDropdownOpen] =
+    React.useState(false);
+
+  const handleActionsDropdownToggle = () => {
+    setIsActionsDropdownOpen(!isActionsDropdownOpen);
   };
+
+  // Download action
+  const { downloadSBOM, downloadSBOMLicenses } = useDownload();
+
+  // Delete action
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+
+  const onDeleteSbomSuccess = (sbom: SbomSummary) => {
+    setIsDeleteDialogOpen(false);
+    pushNotification({
+      title: sbomDeletedSuccessMessage(sbom),
+      variant: "success",
+    });
+    navigate("/sboms");
+  };
+
+  const onDeleteAdvisoryError = (error: AxiosError) => {
+    pushNotification({
+      title: sbomDeletedErrorMessage(error),
+      variant: "danger",
+    });
+  };
+
+  const { mutate: deleteSbom, isPending: isDeleting } = useDeleteSbomMutation(
+    onDeleteSbomSuccess,
+    onDeleteAdvisoryError,
+  );
+
+  // Tabs
+  const [activeTabKey, setActiveTabKey] = React.useState<string | number>(0);
 
   const infoTabRef = React.createRef<HTMLElement>();
   const packagesTabRef = React.createRef<HTMLElement>();
   const vulnerabilitiesTabRef = React.createRef<HTMLElement>();
 
+  // Tabs popover refs
   const vulnerabilitiesTabPopoverRef = React.createRef<HTMLElement>();
 
-  //
-
-  const sbomId = useRouteParams(PathParam.SBOM_ID);
-  const { sbom, isFetching, fetchError } = useFetchSBOMById(sbomId);
-
-  const { downloadSBOM } = useDownload();
+  const handleTabClick = (
+    _event: React.MouseEvent | React.KeyboardEvent | MouseEvent,
+    tabIndex: string | number,
+  ) => {
+    setActiveTabKey(tabIndex);
+  };
 
   return (
     <>
-      <PageSection variant="light">
+      <PageSection type="breadcrumb">
+        <Breadcrumb>
+          <BreadcrumbItem>
+            <Link to={Paths.sboms}>SBOMs</Link>
+          </BreadcrumbItem>
+          <BreadcrumbItem isActive>SBOM details</BreadcrumbItem>
+        </Breadcrumb>
+      </PageSection>
+      <PageSection>
         <Split>
           <SplitItem isFilled>
             <Flex>
               <FlexItem spacer={{ default: "spacerSm" }}>
-                <TextContent>
-                  <Text component="h1">{sbom?.name ?? sbomId ?? ""}</Text>
-                </TextContent>
+                <Content>
+                  <Content component="h1">{sbom?.name ?? sbomId ?? ""}</Content>
+                </Content>
               </FlexItem>
               <FlexItem>
                 {sbom?.labels.type && (
@@ -72,26 +133,62 @@ export const SbomDetails: React.FC = () => {
             </Flex>
           </SplitItem>
           <SplitItem>
-            {!isFetching && (
-              <Button
-                variant="secondary"
-                icon={<DownloadIcon />}
-                onClick={() => {
-                  if (sbomId) {
-                    downloadSBOM(
-                      sbomId,
-                      sbom?.name ? `${sbom?.name}.json` : `${sbomId}.json`
-                    );
-                  }
-                }}
+            {sbom && (
+              <Dropdown
+                isOpen={isActionsDropdownOpen}
+                onSelect={() => setIsActionsDropdownOpen(false)}
+                onOpenChange={(isOpen) => setIsActionsDropdownOpen(isOpen)}
+                popperProps={{ position: "right" }}
+                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                  <MenuToggle
+                    ref={toggleRef}
+                    onClick={handleActionsDropdownToggle}
+                    isExpanded={isActionsDropdownOpen}
+                  >
+                    Actions
+                  </MenuToggle>
+                )}
+                ouiaId="BasicDropdown"
+                shouldFocusToggleOnSelect
               >
-                Download
-              </Button>
+                <DropdownList>
+                  <DropdownItem
+                    key="sbom"
+                    onClick={() => {
+                      if (sbomId) {
+                        downloadSBOM(
+                          sbomId,
+                          sbom?.name ? `${sbom?.name}.json` : `${sbomId}.json`,
+                        );
+                      }
+                    }}
+                  >
+                    Download SBOM
+                  </DropdownItem>
+                  <DropdownItem
+                    key="license"
+                    onClick={() => {
+                      if (sbomId) {
+                        downloadSBOMLicenses(sbomId);
+                      }
+                    }}
+                  >
+                    Download License Report
+                  </DropdownItem>
+                  <Divider component="li" key="separator" />
+                  <DropdownItem
+                    key="delete"
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                  >
+                    Delete
+                  </DropdownItem>
+                </DropdownList>
+              </Dropdown>
             )}
           </SplitItem>
         </Split>
       </PageSection>
-      <PageSection type="nav">
+      <PageSection>
         <Tabs
           mountOnEnter
           activeKey={activeTabKey}
@@ -165,6 +262,23 @@ export const SbomDetails: React.FC = () => {
           {sbomId && <VulnerabilitiesBySbom sbomId={sbomId} />}
         </TabContent>
       </PageSection>
+
+      <ConfirmDialog
+        {...sbomDeleteDialogProps(sbom)}
+        inProgress={isDeleting}
+        titleIconVariant="warning"
+        isOpen={isDeleteDialogOpen}
+        confirmBtnVariant={ButtonVariant.danger}
+        confirmBtnLabel="Delete"
+        cancelBtnLabel="Cancel"
+        onCancel={() => setIsDeleteDialogOpen(false)}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={() => {
+          if (sbom) {
+            deleteSbom(sbom.id);
+          }
+        }}
+      />
     </>
   );
 };

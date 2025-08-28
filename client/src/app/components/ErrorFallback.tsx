@@ -6,9 +6,7 @@ import {
   Button,
   EmptyState,
   EmptyStateBody,
-  EmptyStateIcon,
   EmptyStateVariant,
-  Title,
 } from "@patternfly/react-core";
 import UserNinjaIcon from "@patternfly/react-icons/dist/esm/icons/user-ninja-icon";
 import spacing from "@patternfly/react-styles/css/utilities/Spacing/spacing";
@@ -16,7 +14,7 @@ import spacing from "@patternfly/react-styles/css/utilities/Spacing/spacing";
 import { NotificationsContext } from "@app/components/NotificationsContext";
 
 const usePrevious = <T,>(value: T) => {
-  const ref = useRef<T>();
+  const ref = useRef<T>(null);
   useEffect(() => {
     ref.current = value;
   }, [value]);
@@ -45,11 +43,12 @@ export const ErrorFallback = ({
 
   return (
     <Bullseye>
-      <EmptyState variant={EmptyStateVariant.sm}>
-        <EmptyStateIcon icon={UserNinjaIcon} />
-        <Title headingLevel="h2" size="lg">
-          Oops! Something went wrong.
-        </Title>
+      <EmptyState
+        titleText="Oops! Something went wrong."
+        headingLevel="h4"
+        icon={UserNinjaIcon}
+        variant={EmptyStateVariant.sm}
+      >
         <EmptyStateBody>
           Try to refresh your page or contact your admin.
           <Button

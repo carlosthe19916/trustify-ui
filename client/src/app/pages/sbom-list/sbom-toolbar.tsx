@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   Button,
@@ -9,12 +10,17 @@ import {
 
 import { FilterToolbar } from "@app/components/FilterToolbar";
 import { SimplePagination } from "@app/components/SimplePagination";
+import { Paths } from "@app/Routes";
 
 import { SbomSearchContext } from "./sbom-context";
 
-interface ISbomToolbar {}
+interface SbomToolbarProps {
+  showFilters?: boolean;
+}
 
-export const SbomToolbar: React.FC<ISbomToolbar> = ({}) => {
+export const SbomToolbar: React.FC<SbomToolbarProps> = ({ showFilters }) => {
+  const navigate = useNavigate();
+
   const { tableControls } = React.useContext(SbomSearchContext);
 
   const {
@@ -27,19 +33,37 @@ export const SbomToolbar: React.FC<ISbomToolbar> = ({}) => {
   } = tableControls;
 
   return (
-    <>
-      <Toolbar {...toolbarProps}>
-        <ToolbarContent>
-          <FilterToolbar {...filterToolbarProps} />
-          <ToolbarItem {...paginationToolbarItemProps}>
-            <SimplePagination
-              idPrefix="sbom-table"
-              isTop
-              paginationProps={paginationProps}
-            />
-          </ToolbarItem>
-        </ToolbarContent>
-      </Toolbar>
-    </>
+    <Toolbar {...toolbarProps} aria-label="sbom-toolbar">
+      <ToolbarContent>
+        {showFilters && (
+          <>
+            <FilterToolbar {...filterToolbarProps} />
+            <ToolbarItem>
+              <Button
+                variant="primary"
+                onClick={() => navigate(Paths.sbomUpload)}
+              >
+                Upload SBOM
+              </Button>
+            </ToolbarItem>
+            <ToolbarItem>
+              <Button
+                variant="secondary"
+                onClick={() => navigate(Paths.sbomScan)}
+              >
+                Generate vulnerability report
+              </Button>
+            </ToolbarItem>
+          </>
+        )}
+        <ToolbarItem {...paginationToolbarItemProps}>
+          <SimplePagination
+            idPrefix="sbom-table"
+            isTop
+            paginationProps={paginationProps}
+          />
+        </ToolbarItem>
+      </ToolbarContent>
+    </Toolbar>
   );
 };
