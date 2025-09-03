@@ -10,8 +10,6 @@ import {
   PageSection,
   Split,
   SplitItem,
-  Stack,
-  StackItem,
 } from "@patternfly/react-core";
 
 import { WINDOW_PURLS } from "@app/Constants";
@@ -19,7 +17,6 @@ import { WINDOW_PURLS } from "@app/Constants";
 import { useVulnerabilitiesOfSbomByPurls } from "@static-report/hooks/useVulnerabilitiesOfSbom";
 
 import { VulnerabilityTable } from "./components/VulnerabilityTable";
-import { VulnerabilityMetrics } from "./components/VulnerabilitiesMetrics";
 
 export const Vulnerabilities: React.FC = () => {
   // Actions dropdown
@@ -33,9 +30,9 @@ export const Vulnerabilities: React.FC = () => {
   //
 
   const {
-    data: { vulnerabilities, summary },
+    data: { vulnerabilities },
     isFetching,
-    // fetchError,
+    fetchError,
   } = useVulnerabilitiesOfSbomByPurls(
     // biome-ignore lint/suspicious/noExplicitAny: allowed
     (window as any)[WINDOW_PURLS] as string[],
@@ -79,22 +76,11 @@ export const Vulnerabilities: React.FC = () => {
         </Split>
       </PageSection>
       <PageSection>
-        <Stack hasGutter>
-          <StackItem>
-            <VulnerabilityMetrics
-              summary={summary}
-              isFetching={isFetching}
-              // fetchError={fetchError}
-            />
-          </StackItem>
-          <StackItem>
-            <VulnerabilityTable
-              vulnerabilities={vulnerabilities}
-              isFetching={isFetching}
-              // fetchError={fetchError}
-            />
-          </StackItem>
-        </Stack>
+        <VulnerabilityTable
+          vulnerabilities={vulnerabilities}
+          isFetching={isFetching}
+          fetchError={fetchError}
+        />
       </PageSection>
     </>
   );

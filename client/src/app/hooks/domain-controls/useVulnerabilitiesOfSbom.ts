@@ -59,6 +59,7 @@ export const DEFAULT_SUMMARY: VulnerabilityOfSbomSummary = {
     fixed: { ...DEFAULT_SEVERITY },
     not_affected: { ...DEFAULT_SEVERITY },
     known_not_affected: { ...DEFAULT_SEVERITY },
+    under_investigation: { ...DEFAULT_SEVERITY },
   },
 };
 

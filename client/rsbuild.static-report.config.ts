@@ -79,6 +79,14 @@ export default defineConfig({
         from: brandingPath,
         to: "branding",
       },
+      ...(process.env.NODE_ENV === "development"
+        ? [
+            {
+              from: "src/static-report/data.js",
+              to: ".",
+            },
+          ]
+        : []),
     ],
     sourceMap: process.env.NODE_ENV === "development",
   },

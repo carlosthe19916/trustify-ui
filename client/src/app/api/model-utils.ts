@@ -1,6 +1,6 @@
 import type React from "react";
 
-import type { ProgressProps } from "@patternfly/react-core";
+import type { LabelProps, ProgressProps } from "@patternfly/react-core";
 import {
   SeverityCriticalIcon,
   SeverityImportantIcon,
@@ -18,7 +18,7 @@ import {
   t_global_icon_color_severity_undefined_default as undefinedColor,
 } from "@patternfly/react-tokens";
 
-import type { ExtendedSeverity, Label } from "./models";
+import type { ExtendedSeverity, Label, VulnerabilityStatus } from "./models";
 import type { Score, ScoreType } from "@app/client";
 
 type ListType = {
@@ -68,6 +68,36 @@ export const severityList: ListType = {
     color: criticalColor,
     progressProps: { variant: "danger" },
     icon: SeverityCriticalIcon,
+  },
+};
+
+type VulnerabilityStatusListType = {
+  [key in VulnerabilityStatus]: {
+    name: string;
+    color: LabelProps["color"];
+  };
+};
+
+export const vulnerabilityStatusList: VulnerabilityStatusListType = {
+  fixed: {
+    name: "Fixed",
+    color: "blue",
+  },
+  not_affected: {
+    name: "Not affected",
+    color: "green",
+  },
+  known_not_affected: {
+    name: "Known not affected",
+    color: "green",
+  },
+  under_investigation: {
+    name: "Under investigation",
+    color: "yellow",
+  },
+  affected: {
+    name: "Affected",
+    color: "red",
   },
 };
 

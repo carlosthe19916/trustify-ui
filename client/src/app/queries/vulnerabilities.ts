@@ -11,8 +11,7 @@ import {
   getVulnerability,
   listVulnerabilities,
 } from "@app/client";
-import { WINDOW_ANALYSIS_RESPONSE } from "@app/Constants";
-import ENV from "@app/env";
+import { isMockDisabled, WINDOW_ANALYSIS_RESPONSE } from "@app/Constants";
 import { requestParamsQuery } from "@app/hooks/table-controls";
 
 import { mockPromise } from "./helpers";
@@ -46,35 +45,34 @@ export const useFetchVulnerabilities = (
 };
 
 export const useFetchVulnerabilitiesByPackageIds = (ids: string[]) => {
-  const chunks =
-    ENV.MOCK === "off"
-      ? {
-          ids: ids.reduce<string[][]>((chunks, item, index) => {
-            if (index % 100 === 0) {
-              chunks.push([item]);
-            } else {
-              chunks[chunks.length - 1].push(item);
-            }
-            return chunks;
-          }, []),
-          dataResolver: async (ids: string[]) => {
-            const response = await analyze({
-              client,
-              body: { purls: ids },
-            });
-            return response.data;
-          },
-        }
-      : {
-          ids: [ids],
-          dataResolver: (_ids: string[]) => {
-            return mockPromise(
-              // biome-ignore lint/suspicious/noExplicitAny: allowed
-              ((window as any)[WINDOW_ANALYSIS_RESPONSE] as AnalysisResponse) ??
-                {},
-            );
-          },
-        };
+  const chunks = isMockDisabled
+    ? {
+        ids: ids.reduce<string[][]>((chunks, item, index) => {
+          if (index % 100 === 0) {
+            chunks.push([item]);
+          } else {
+            chunks[chunks.length - 1].push(item);
+          }
+          return chunks;
+        }, []),
+        dataResolver: async (ids: string[]) => {
+          const response = await analyze({
+            client,
+            body: { purls: ids },
+          });
+          return response.data;
+        },
+      }
+    : {
+        ids: [ids],
+        dataResolver: (_ids: string[]) => {
+          return mockPromise(
+            // biome-ignore lint/suspicious/noExplicitAny: allowed
+            ((window as any)[WINDOW_ANALYSIS_RESPONSE] as AnalysisResponse) ??
+              {},
+          );
+        },
+      };
 
   const userQueries = useQueries({
     queries: chunks.ids.map((ids) => {
@@ -87,24 +85,22 @@ export const useFetchVulnerabilitiesByPackageIds = (ids: string[]) => {
   });
 
   const isFetching = userQueries.some(({ isLoading }) => isLoading);
-  const fetchError = userQueries.find(
-    ({ error }) => !!(error as AxiosError | null),
-  );
+  const fetchError = userQueries.find(({ error }) => !!error);
 
-  const packages: AnalysisResponse = {};
+  const analysisResponse: AnalysisResponse = {};
 
   if (!isFetching) {
     for (const data of userQueries.map((item) => item?.data ?? {})) {
       for (const [id, analysisDetails] of Object.entries(data)) {
-        packages[id] = analysisDetails;
+        analysisResponse[id] = analysisDetails;
       }
     }
   }
 
   return {
-    packages,
+    analysisResponse,
     isFetching,
-    fetchError,
+    fetchError: (fetchError?.error ?? undefined) as AxiosError | undefined,
   };
 };
 

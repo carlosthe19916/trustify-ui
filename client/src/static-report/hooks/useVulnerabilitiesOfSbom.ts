@@ -10,11 +10,11 @@ import {
   extendedSeverityFromSeverity,
 } from "@app/api/models";
 import type { AdvisoryHead, Score, VulnerabilityHead } from "@app/client";
-import { useFetchVulnerabilitiesByPackageIds } from "@app/queries/vulnerabilities";
 import {
   DEFAULT_SUMMARY,
   type VulnerabilityOfSbomSummary,
 } from "@app/hooks/domain-controls/useVulnerabilitiesOfSbom";
+import { useFetchVulnerabilitiesByPackageIds } from "@app/queries/vulnerabilities";
 
 type AdvisoryFromAnalysis = {
   advisory: AdvisoryHead;
@@ -36,18 +36,22 @@ export interface VulnerabilityOfSbomFromAnalysis {
 }
 
 export const useVulnerabilitiesOfSbomByPurls = (purls: string[]) => {
-  const { packages, isFetching, fetchError } =
+  const { analysisResponse, isFetching, fetchError } =
     useFetchVulnerabilitiesByPackageIds(purls);
 
   const result = React.useMemo(() => {
-    if (isFetching || fetchError || Object.keys(packages).length === 0) {
+    if (
+      isFetching ||
+      fetchError ||
+      Object.keys(analysisResponse).length === 0
+    ) {
       return {
         summary: { ...DEFAULT_SUMMARY },
         vulnerabilities: [],
       };
     }
 
-    const vulnerabilities = Object.entries(packages)
+    const vulnerabilities = Object.entries(analysisResponse)
       .flatMap(([purl, analysisDetails]) => {
         return analysisDetails.details.flatMap((vulnerability) => {
           return Object.entries(vulnerability.status).flatMap(
@@ -229,10 +233,11 @@ export const useVulnerabilitiesOfSbomByPurls = (purls: string[]) => {
       vulnerabilities,
       summary,
     };
-  }, [packages, isFetching, fetchError]);
+  }, [analysisResponse, isFetching, fetchError]);
 
   return {
     data: result,
+    analysisResponse,
     isFetching,
     fetchError,
   };

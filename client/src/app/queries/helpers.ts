@@ -1,4 +1,4 @@
-import ENV from "@app/env";
+import { isMockDisabled } from "@app/Constants";
 import { type UseQueryOptions, useQuery } from "@tanstack/react-query";
 
 const defaultTimeout = 1000;
@@ -29,6 +29,6 @@ export const useMockableQuery = <
 ) => {
   return useQuery<TQueryFnData, TError, TData>({
     ...params,
-    queryFn: ENV.MOCK === "off" ? params.queryFn : () => mockPromise(mockData),
+    queryFn: isMockDisabled ? params.queryFn : () => mockPromise(mockData),
   });
 };
