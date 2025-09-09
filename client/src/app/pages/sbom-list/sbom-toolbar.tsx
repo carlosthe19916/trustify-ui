@@ -10,6 +10,7 @@ import {
 
 import { FilterToolbar } from "@app/components/FilterToolbar";
 import { SimplePagination } from "@app/components/SimplePagination";
+import { Paths } from "@app/Routes";
 
 import { SbomSearchContext } from "./sbom-context";
 
