@@ -3,6 +3,7 @@ FROM registry.access.redhat.com/ubi9/nodejs-22:latest AS builder
 
 USER 1001
 COPY --chown=1001 . .
+RUN npm install -g npm@9
 RUN \
   npm version && \
   npm config ls && \
