@@ -1,6 +1,5 @@
 import { logger } from "../../common/constants";
 import { test } from "../fixtures";
-import { deleteSboms } from "../helpers/delete";
 import { writeRequestDurationToFile } from "../helpers/report";
 import { uploadSboms } from "../helpers/upload";
 
@@ -32,91 +31,81 @@ const SBOM_FILES = [
 
 let sbomIds: string[] = [];
 
-const REPORT_FILE_PREFIX = "report-perf-delete-";
+const REPORT_FILE_PREFIX = "report-perf-delete";
+
+type Performance = {
+  sbomId: string;
+  deleteDuration: number | undefined;
+};
+
+const writePerformanceDataToFile = (filename: string, data: Performance[]) => {
+  writeRequestDurationToFile(filename, "No.", "SBOM ID", "Duration [ms]");
+  data.forEach((item, index) => {
+    writeRequestDurationToFile(
+      filename,
+      index + 1,
+      item.sbomId,
+      item.deleteDuration,
+    );
+  });
+};
 
 test.describe("Performance / Deletion", { tag: "@performance" }, () => {
   test.beforeEach(async ({ axios }) => {
     logger.info("Uploading SBOMs before deletion performance tests.");
 
     const uploadResponses = await uploadSboms(axios, SBOM_DIR, SBOM_FILES);
-
-    uploadResponses.forEach((response) => {
-      sbomIds.push(response.data.id);
-    });
+    sbomIds = uploadResponses.map((response) => response.data.id);
 
     sbomIds.forEach((id) => {
       logger.info(id);
     });
-
     logger.info(`Uploaded ${sbomIds.length} SBOMs.`);
   });
 
   test("SBOMs / Sequential", async ({ axios }) => {
-    const currentTimeStamp = Date.now();
-    const reportFile = `${REPORT_FILE_PREFIX}sequential-${currentTimeStamp}.csv`;
-    var index = 1;
+    // Gather performance data
+    const performance: Performance[] = [];
+    for (let i = 0; i < sbomIds.length; i++) {
+      const sbomId = sbomIds[i];
+      const response = await axios.delete(`/api/v2/sbom/${sbomId}`);
+      const deleteDuration = response.duration;
 
-    var duration = "";
-
-    writeRequestDurationToFile(reportFile, "No.", "SBOM ID", "Duration [ms]");
-
-    for (const sbomId of sbomIds) {
-      try {
-        await axios.delete(`/api/v2/sbom/${sbomId}`).then((response) => {
-          duration = String(response.duration);
-        });
-      } catch (error) {
-        logger.error(`SBOM with ID ${sbomId} could not be deleted.`, error);
-        duration = "n/a";
-      }
-
-      writeRequestDurationToFile(reportFile, String(index), sbomId, duration);
-      duration = "";
-      index++;
+      performance.push({ sbomId, deleteDuration });
     }
+
+    // Write results to file
+    const currentTimeStamp = Date.now();
+    const reportFile = `${REPORT_FILE_PREFIX}-sequential-${currentTimeStamp}.csv`;
+    writePerformanceDataToFile(reportFile, performance);
   });
 
   test("SBOMs / Parallel", async ({ axios }) => {
-    const currentTimeStamp = Date.now();
-    const reportFile = `${REPORT_FILE_PREFIX}parallel-${currentTimeStamp}.csv`;
-
-    writeRequestDurationToFile(reportFile, "No.", "SBOM ID", "Duration [ms]");
-
+    // Gather performance data
     const deletionPromises = sbomIds.map(async (sbomId) => {
-      const deletePromise = axios
-        .delete(`/api/v2/sbom/${sbomId}`)
-        .then((response) =>
-          writeRequestDurationToFile(
-            reportFile,
-            "n/a",
-            response.data.id,
-            String(response.duration),
-          ),
-        )
-        .catch((error) => {
-          logger.error(`SBOM with ID ${sbomId} could not be deleted.`, error);
-        });
-
-      return deletePromise;
+      const response = await axios.delete(`/api/v2/sbom/${sbomId}`);
+      return { sbomId, deleteDuration: response.duration };
     });
 
-    await Promise.all(deletionPromises);
+    const performance = await Promise.all(deletionPromises);
+
+    // Write results to file
+    const currentTimeStamp = Date.now();
+    const reportFile = `${REPORT_FILE_PREFIX}-parallel-${currentTimeStamp}.csv`;
+    writePerformanceDataToFile(reportFile, performance);
   });
 
   // Re-try deletion of all SBOMs in case some of the SBOMs didn't get deleted during the tests.
   test.afterEach(async ({ axios }) => {
     logger.info("Cleaning up SBOMs after deletion performance tests.");
 
-    const deleteResponses = await deleteSboms(axios, sbomIds);
+    const deletionPromises = sbomIds.map((sbomId) => {
+      return axios.delete(`/api/v2/sbom/${sbomId}`);
+    });
 
-    if (
-      deleteResponses.every(
-        (result) =>
-          result.status === "fulfilled" && result.value?.status === 200,
-      )
-    ) {
-      logger.info("All SBOMS have been deleted successfully.");
-    } else {
+    try {
+      await Promise.all(deletionPromises);
+    } catch (_error) {
       logger.warn(
         "Some SBOM deletions were unsuccessful. Check the logs and/or consider deleting the SBOMs manually.",
       );

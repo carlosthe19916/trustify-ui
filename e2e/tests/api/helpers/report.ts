@@ -3,9 +3,9 @@ import { logger, REPORT_DIR } from "../../common/constants";
 
 export function writeRequestDurationToFile(
   fileName: string,
-  sbomNumber: string,
+  sbomNumber: number | string,
   sbomId: string,
-  duration: string,
+  duration?: number | string,
 ) {
   const line = `${sbomNumber},${sbomId},${duration}`;
 

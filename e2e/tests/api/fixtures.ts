@@ -93,7 +93,10 @@ declare module "axios" {
   }
   export interface AxiosResponse {
     endTime?: number;
-    duration?: number; // in milliseconds
+    /**
+     * Duration in milliseconds
+     */
+    duration?: number;
   }
 }
 

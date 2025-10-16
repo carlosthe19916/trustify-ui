@@ -18,8 +18,7 @@ export async function uploadSboms(
     });
   });
 
-  const responses = await Promise.all(uploads);
-  return responses;
+  return await Promise.all(uploads);
 }
 
 export async function uploadAdvisories(
@@ -37,6 +36,5 @@ export async function uploadAdvisories(
     });
   });
 
-  const responses = await Promise.all(uploads);
-  return responses;
+  return await Promise.all(uploads);
 }
