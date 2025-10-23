@@ -15,12 +15,11 @@ export const useFetchPackages = (
 ) => {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: [PackagesQueryKey, params],
-    queryFn: () => {
-      return listPurl({
+    queryFn: () =>
+      listPurl({
         client: client,
         query: { ...requestParamsQuery(params) },
-      });
-    },
+      }),
     enabled: !disableQuery,
   });
 
@@ -31,7 +30,7 @@ export const useFetchPackages = (
       params: params,
     },
     isFetching: isLoading,
-    fetchError: error as AxiosError,
+    fetchError: error as AxiosError | null,
     refetch,
   };
 };
@@ -45,7 +44,7 @@ export const useFetchPackageById = (id: string) => {
   return {
     pkg: data?.data,
     isFetching: isLoading,
-    fetchError: error as AxiosError,
+    fetchError: error as AxiosError | null,
   };
 };
 
@@ -55,13 +54,12 @@ export const useFetchPackagesBySbomId = (
 ) => {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: [PackagesQueryKey, "by-sbom", sbomId, params],
-    queryFn: () => {
-      return listPackages({
+    queryFn: () =>
+      listPackages({
         client,
         path: { id: sbomId },
         query: { ...requestParamsQuery(params) },
-      });
-    },
+      }),
   });
 
   return {
@@ -71,7 +69,7 @@ export const useFetchPackagesBySbomId = (
       params,
     },
     isFetching: isLoading,
-    fetchError: error,
+    fetchError: error as AxiosError | null,
     refetch,
   };
 };

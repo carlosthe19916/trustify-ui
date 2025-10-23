@@ -5,7 +5,7 @@ info:
   license:
     name: Apache License, Version 2.0
     identifier: Apache-2.0
-  version: 0.3.5
+  version: 0.4.0-beta.1
 paths:
   /.well-known/trustify:
     get:
@@ -1322,6 +1322,87 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedResults_ImporterReport'
+  /api/v2/license:
+    get:
+      tags:
+      - license
+      summary: List all licenses from SBOMs
+      operationId: listLicenses
+      parameters:
+      - name: q
+        in: query
+        description: |-
+          Query for advisories defined using the following EBNF grammar (ISO/IEC 14977):
+          (* Query Grammar - EBNF Compliant *)
+          query = ( values | filter ) , { "&" , query } ;
+          values = value , { "|" , value } ;
+          filter = field , operator , values ;
+          operator = "=" | "!=" | "~" | "!~" | ">=" | ">" | "<=" | "<" ;
+          field = ("license")
+          value = { value_char } ;
+          value_char = escaped_char | normal_char ;
+          escaped_char = "\" , special_char ;
+          normal_char = ? any character except '&', '|', '=', '!', '~', '>', '<', '\' ? ;
+          special_char = "&" | "|" | "=" | "!" | "~" | ">" | "<" | "\" ;
+          (* Examples:
+              - Simple filter: title=example
+              - Multiple values filter: title=foo|bar|baz
+              - Complex filter: modified>2024-01-01
+              - Combined query: title=foo&average_severity=high
+              - Escaped characters: title=foo\&bar
+          *)
+        required: false
+        schema:
+          type: string
+      - name: sort
+        in: query
+        description: |-
+          EBNF grammar for the _sort_ parameter:
+          ```text
+              sort = field [ ':', order ] { ',' sort }
+              order = ( "asc" | "desc" )
+              field = ("license")
+          ```
+          The optional _order_ should be one of "asc" or "desc". If
+          omitted, the order defaults to "asc".
+
+          Each _field_ name must correspond to one of the columns of the
+          table holding the entities being queried. Those corresponding
+          to JSON objects in the database may use a ':' to delimit the
+          column name and the object key,
+          e.g. `purl:qualifiers:type:desc`
+        required: false
+        schema:
+          type: string
+      - name: offset
+        in: query
+        description: |-
+          The first item to return, skipping all that come before it.
+
+          NOTE: The order of items is defined by the API being called.
+        required: false
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: limit
+        in: query
+        description: |-
+          The maximum number of entries to return.
+
+          Zero means: no limit
+        required: false
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        '200':
+          description: Matching licenses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResults_LicenseText'
   /api/v2/license/spdx/license:
     get:
       tags:
@@ -1976,6 +2057,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BasePurlDetails'
+  /api/v2/purl/recommend:
+    post:
+      tags:
+      - purl
+      operationId: recommend
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecommendRequest'
+        required: true
+      responses:
+        '200':
+          description: Get recommendations and remediations for provided purls
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendResponse'
   /api/v2/purl/{key}:
     get:
       tags:
@@ -3090,22 +3189,6 @@ paths:
                 $ref: '#/components/schemas/VulnerabilityDetails'
         '404':
           description: The vulnerability could not be found
-    delete:
-      tags:
-      - vulnerability
-      summary: Delete vulnerability
-      operationId: deleteVulnerability
-      parameters:
-      - name: id
-        in: path
-        description: ID of the vulnerability
-        required: true
-        schema:
-          type: string
-      responses:
-        '501':
-          description: Method not yet implemented
-      deprecated: true
   /api/v2/weakness:
     get:
       tags:
@@ -3242,9 +3325,7 @@ components:
     AdvisoryDetails:
       allOf:
       - $ref: '#/components/schemas/AdvisoryHead'
-      - oneOf:
-        - type: 'null'
-        - $ref: '#/components/schemas/SourceDocument'
+      - $ref: '#/components/schemas/SourceDocument'
       - type: object
         required:
         - vulnerabilities
@@ -3325,10 +3406,8 @@ components:
     AdvisorySummary:
       allOf:
       - $ref: '#/components/schemas/AdvisoryHead'
-      - oneOf:
-        - type: 'null'
-        - $ref: '#/components/schemas/SourceDocument'
-          description: Information pertaning to the underlying source document, if any.
+      - $ref: '#/components/schemas/SourceDocument'
+        description: Information pertaning to the underlying source document, if any.
       - type: object
         required:
         - average_severity
@@ -4024,6 +4103,13 @@ components:
           type: array
           items:
             type: string
+    LicenseText:
+      type: object
+      required:
+      - license
+      properties:
+        license:
+          type: string
     Message:
       type: object
       required:
@@ -4147,10 +4233,8 @@ components:
           items:
             allOf:
             - $ref: '#/components/schemas/AdvisoryHead'
-            - oneOf:
-              - type: 'null'
-              - $ref: '#/components/schemas/SourceDocument'
-                description: Information pertaning to the underlying source document, if any.
+            - $ref: '#/components/schemas/SourceDocument'
+              description: Information pertaning to the underlying source document, if any.
             - type: object
               required:
               - average_severity
@@ -4266,6 +4350,25 @@ components:
                 type: array
                 items:
                   type: string
+        total:
+          type: integer
+          format: int64
+          minimum: 0
+    PaginatedResults_LicenseText:
+      type: object
+      required:
+      - items
+      - total
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required:
+            - license
+            properties:
+              license:
+                type: string
         total:
           type: integer
           format: int64
@@ -4457,9 +4560,7 @@ components:
           items:
             allOf:
             - $ref: '#/components/schemas/SbomHead'
-            - oneOf:
-              - type: 'null'
-              - $ref: '#/components/schemas/SourceDocument'
+            - $ref: '#/components/schemas/SourceDocument'
             - type: object
               required:
               - described_by
@@ -4677,6 +4778,7 @@ components:
         - base
         - advisories
         - licenses
+        - licenses_ref_mapping
         properties:
           advisories:
             type: array
@@ -4687,7 +4789,12 @@ components:
           licenses:
             type: array
             items:
-              $ref: '#/components/schemas/PurlLicenseSummary'
+              $ref: '#/components/schemas/LicenseInfo'
+          licenses_ref_mapping:
+            type: array
+            items:
+              $ref: '#/components/schemas/LicenseRefMapping'
+            deprecated: true
           version:
             $ref: '#/components/schemas/VersionedPurlHead'
     PurlHead:
@@ -4703,18 +4810,6 @@ components:
           type: string
           format: uuid
           description: The ID of the qualified PURL
-    PurlLicenseSummary:
-      type: object
-      required:
-      - sbom
-      - licenses
-      properties:
-        licenses:
-          type: array
-          items:
-            type: string
-        sbom:
-          $ref: '#/components/schemas/SbomHead'
     PurlStatus:
       type: object
       required:
@@ -4786,6 +4881,43 @@ components:
           source:
             type: string
             description: The name of the quay registry, e.g. quay.io
+          unencrypted:
+            type: boolean
+            description: Whether the scheme used is 'http' [true] or 'https' [false]
+    RecommendEntry:
+      type: object
+      required:
+      - package
+      - vulnerabilities
+      properties:
+        package:
+          type: string
+        vulnerabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/VulnerabilityStatus'
+    RecommendRequest:
+      type: object
+      required:
+      - purls
+      properties:
+        purls:
+          type: array
+          items:
+            $ref: '#/components/schemas/Purl'
+    RecommendResponse:
+      type: object
+      required:
+      - recommendations
+      properties:
+        recommendations:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/RecommendEntry'
+          propertyNames:
+            type: string
     Relationship:
       type: string
       enum:
@@ -5020,10 +5152,12 @@ components:
         - average_score
         - status
         - packages
+        - scores
         properties:
           average_score:
             type: number
             format: double
+            deprecated: true
           average_severity:
             $ref: '#/components/schemas/Severity'
           context:
@@ -5034,14 +5168,16 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/SbomPackage'
+          scores:
+            type: array
+            items:
+              $ref: '#/components/schemas/Score'
           status:
             type: string
     SbomSummary:
       allOf:
       - $ref: '#/components/schemas/SbomHead'
-      - oneOf:
-        - type: 'null'
-        - $ref: '#/components/schemas/SourceDocument'
+      - $ref: '#/components/schemas/SourceDocument'
       - type: object
         required:
         - described_by
@@ -5205,6 +5341,55 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/PurlHead'
+    VexJustification:
+      oneOf:
+      - type: string
+        enum:
+        - ComponentNotPresent
+      - type: string
+        enum:
+        - VulnerableCodeNotPresent
+      - type: string
+        enum:
+        - VulnerableCodeNotInExecutePath
+      - type: string
+        enum:
+        - VulnerableCodeCannotBeControlledByAdversary
+      - type: string
+        enum:
+        - InlineMitigationsAlreadyExist
+      - type: string
+        enum:
+        - NotProvided
+      - type: object
+        required:
+        - Other
+        properties:
+          Other:
+            type: string
+    VexStatus:
+      oneOf:
+      - type: string
+        enum:
+        - Affected
+      - type: string
+        enum:
+        - Fixed
+      - type: string
+        enum:
+        - NotAffected
+      - type: string
+        enum:
+        - UnderInvestigation
+      - type: string
+        enum:
+        - Recommended
+      - type: object
+        required:
+        - Other
+        properties:
+          Other:
+            type: string
     VulnerabilityAdvisoryHead:
       allOf:
       - $ref: '#/components/schemas/AdvisoryHead'
@@ -5390,6 +5575,21 @@ components:
             type:
             - string
             - 'null'
+    VulnerabilityStatus:
+      type: object
+      required:
+      - id
+      properties:
+        id:
+          type: string
+        justification:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/VexJustification'
+        status:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/VexStatus'
     VulnerabilitySummary:
       allOf:
       - $ref: '#/components/schemas/VulnerabilityHead'

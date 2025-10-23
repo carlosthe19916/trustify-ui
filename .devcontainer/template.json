@@ -1,6 +1,8 @@
 {
   "name": "playwright",
-  "image": "mcr.microsoft.com/playwright:v1.55.0-jammy",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
   "workspaceFolder": "/workspaces/trustify-ui/e2e",
   "runArgs": [
     "--privileged",
@@ -27,8 +29,16 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "ms-playwright.playwright"
-      ]
+        "ms-playwright.playwright",
+        "alexkrechik.cucumberautocomplete"
+      ],
+      "settings": {
+        "cucumberautocomplete.steps": [
+          "tests/ui/features/@*/*.step.ts",
+          "tests/ui/steps/*.ts"
+        ],
+        "cucumberautocomplete.strictGherkinCompletion": true  
+      }
     }
   }
 }

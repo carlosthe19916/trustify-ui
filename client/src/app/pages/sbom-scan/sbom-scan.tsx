@@ -22,25 +22,25 @@ import {
   ModalFooter,
   ModalHeader,
   PageSection,
+  Spinner,
   Split,
   SplitItem,
   type MenuToggleElement,
 } from "@patternfly/react-core";
 
+import CheckCircleIcon from "@patternfly/react-icons/dist/esm/icons/check-circle-icon";
 import DownloadIcon from "@patternfly/react-icons/dist/esm/icons/download-icon";
 import ExclamationCircleIcon from "@patternfly/react-icons/dist/esm/icons/exclamation-circle-icon";
-import InProgressIcon from "@patternfly/react-icons/dist/esm/icons/in-progress-icon";
+import TimesIcon from "@patternfly/react-icons/dist/esm/icons/times-icon";
 
-import { generateStaticReport } from "@app/api/rest";
 import type { ExtractResult } from "@app/client";
-import { WINDOW_ANALYSIS_RESPONSE } from "@app/Constants";
 import { useUploadAndAnalyzeSBOM } from "@app/queries/sboms-analysis";
 import { Paths } from "@app/Routes";
 
-import { useVulnerabilitiesOfSbomByPurls } from "@static-report/hooks/useVulnerabilitiesOfSbom";
-import { VulnerabilityTable } from "@static-report/pages/vulnerabilities/components/VulnerabilityTable";
-
 import { UploadFileForAnalysis } from "./components/UploadFileForAnalysis";
+import { VulnerabilityTable } from "./components/VulnerabilityTable";
+import { useVulnerabilitiesOfSbomByPurls } from "./hooks/useVulnerabilitiesOfSbom";
+import { convertToCSV } from "./scan-utils";
 
 export const SbomScan: React.FC = () => {
   // Actions dropdown
@@ -58,6 +58,12 @@ export const SbomScan: React.FC = () => {
     useUploadAndAnalyzeSBOM((extractedData, _file) => {
       setUploadResponseData(extractedData);
     });
+
+  const joinedFileName = React.useMemo(() => {
+    return Array.from(uploads.keys())
+      .map((e) => e.name)
+      .join("_");
+  }, [uploads]);
 
   // Navigation blockers
   const shouldBlock = React.useCallback<BlockerFunction>(
@@ -83,30 +89,16 @@ export const SbomScan: React.FC = () => {
 
   const {
     data: { vulnerabilities },
-    analysisResponse,
     isFetching,
     fetchError,
   } = useVulnerabilitiesOfSbomByPurls(allPurls);
 
   // Other actions
-  const [isDownloadingReport, setIsDownloadingReport] = React.useState(false);
 
-  const downloadReport = async () => {
-    setIsDownloadingReport(true);
-
-    const form = new FormData();
-    form.append(
-      WINDOW_ANALYSIS_RESPONSE,
-      new Blob([JSON.stringify(analysisResponse)], {
-        type: "application/json",
-      }),
-    );
-
-    await generateStaticReport(form).then((response) => {
-      saveAs(new Blob([response.data as BlobPart]), "report.tar.gz");
-    });
-
-    setIsDownloadingReport(false);
+  const handleDownloadCSV = async () => {
+    const csv = convertToCSV(vulnerabilities);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    saveAs(blob, `${joinedFileName}.csv`);
   };
 
   const scanAnotherFile = () => {
@@ -117,8 +109,11 @@ export const SbomScan: React.FC = () => {
     setUploadResponseData(null);
   };
 
-  const reportNotReady =
-    uploadResponseData === null || isFetching || fetchError;
+  const noReportToRender =
+    uploadResponseData === null ||
+    isFetching ||
+    fetchError ||
+    vulnerabilities.length === 0;
 
   return (
     <>
@@ -127,7 +122,7 @@ export const SbomScan: React.FC = () => {
           <BreadcrumbItem>
             <Link to={Paths.sboms}>SBOMs</Link>
           </BreadcrumbItem>
-          {reportNotReady ? (
+          {noReportToRender ? (
             <BreadcrumbItem isActive>
               Generate vulnerability report
             </BreadcrumbItem>
@@ -137,7 +132,7 @@ export const SbomScan: React.FC = () => {
         </Breadcrumb>
       </PageSection>
       <PageSection>
-        {reportNotReady ? (
+        {noReportToRender ? (
           <Content>
             <Content component="h1">Generate vulnerability report</Content>
             <Content component="p">
@@ -175,16 +170,15 @@ export const SbomScan: React.FC = () => {
               >
                 <DropdownList>
                   <DropdownItem key="scan-another" onClick={scanAnotherFile}>
-                    Scan another
+                    Generate new report
                   </DropdownItem>
                 </DropdownList>
                 <DropdownList>
                   <DropdownItem
                     key="download-report"
-                    onClick={downloadReport}
-                    isDisabled={isDownloadingReport}
+                    onClick={handleDownloadCSV}
                   >
-                    Download report
+                    Download as CSV
                   </DropdownItem>
                 </DropdownList>
               </Dropdown>
@@ -202,18 +196,22 @@ export const SbomScan: React.FC = () => {
           />
         ) : isFetching ? (
           <EmptyState
-            titleText="Generating SBOM report"
+            titleText="Generating vulnerability report"
             headingLevel="h4"
-            icon={InProgressIcon}
+            icon={Spinner}
           >
             <EmptyStateBody>
-              Analyzing your SBOM for security vulnerabilities, license issues
-              and dependency details.
+              Analyzing your SBOM for security vulnerabilities and package
+              details.
             </EmptyStateBody>
             <EmptyStateFooter>
               <EmptyStateActions>
-                <Button variant="link" onClick={scanAnotherFile}>
-                  Cancel scan
+                <Button
+                  variant="link"
+                  onClick={scanAnotherFile}
+                  icon={<TimesIcon />}
+                >
+                  Cancel Report
                 </Button>
               </EmptyStateActions>
             </EmptyStateFooter>
@@ -227,8 +225,28 @@ export const SbomScan: React.FC = () => {
             variant={EmptyStateVariant.sm}
           >
             <EmptyStateBody>
-              The file could not be analyzed. The file might be corrupted or an
-              unsupported format.
+              The {joinedFileName} file could not be analyzed. The file might be
+              corrupted or an unsupported format.
+            </EmptyStateBody>
+            <EmptyStateFooter>
+              <EmptyStateActions>
+                <Button variant="primary" onClick={scanAnotherFile}>
+                  Try another file
+                </Button>
+              </EmptyStateActions>
+            </EmptyStateFooter>
+          </EmptyState>
+        ) : vulnerabilities.length === 0 ? (
+          <EmptyState
+            status="success"
+            headingLevel="h4"
+            titleText="No vulnerabilities found"
+            icon={CheckCircleIcon}
+            variant={EmptyStateVariant.sm}
+          >
+            <EmptyStateBody>
+              The {joinedFileName} was successfully analyzed and found no
+              vulnerabilities to report.
             </EmptyStateBody>
             <EmptyStateFooter>
               <EmptyStateActions>
@@ -261,10 +279,8 @@ export const SbomScan: React.FC = () => {
           <Button
             variant="primary"
             icon={<DownloadIcon />}
-            isLoading={isDownloadingReport}
-            isDisabled={isDownloadingReport}
             onClick={async () => {
-              await downloadReport();
+              await handleDownloadCSV();
               blocker.state === "blocked" && blocker.proceed();
             }}
           >
@@ -272,7 +288,6 @@ export const SbomScan: React.FC = () => {
           </Button>
           <Button
             variant="secondary"
-            isDisabled={isDownloadingReport}
             onClick={async () => {
               blocker.state === "blocked" && blocker.proceed();
             }}
@@ -282,7 +297,6 @@ export const SbomScan: React.FC = () => {
           <Button
             key="cancel"
             variant="link"
-            isDisabled={isDownloadingReport}
             onClick={() => {
               blocker.state === "blocked" && blocker.reset();
             }}

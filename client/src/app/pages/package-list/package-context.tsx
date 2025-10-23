@@ -1,6 +1,7 @@
 import React from "react";
 
 import type { AxiosError } from "axios";
+import { useDebounceValue } from "usehooks-ts";
 
 import {
   FILTER_TEXT_CATEGORY_KEY,
@@ -15,6 +16,7 @@ import {
   useTableControlProps,
   useTableControlState,
 } from "@app/hooks/table-controls";
+import { useFetchLicenses } from "@app/queries/licenses";
 import { useFetchPackages } from "@app/queries/packages";
 import { decomposePurl } from "@app/utils/utils";
 
@@ -29,17 +31,18 @@ interface IPackageSearchContext {
     | "namespace"
     | "version"
     | "type"
+    | "licenses"
     | "path"
     | "qualifiers"
     | "vulnerabilities",
     "name" | "namespace" | "version",
-    "" | "type" | "arch",
+    "" | "type" | "arch" | "license",
     string
   >;
 
   totalItemCount: number;
   isFetching: boolean;
-  fetchError: AxiosError;
+  fetchError: AxiosError | null;
 }
 
 const contextDefaultValue = {} as IPackageSearchContext;
@@ -54,6 +57,22 @@ interface IPackageProvider {
 export const PackageSearchProvider: React.FunctionComponent<
   IPackageProvider
 > = ({ children }) => {
+  const [inputValueLicense, setInputValueLicense] = React.useState("");
+  const [debouncedInputValueLicense] = useDebounceValue(inputValueLicense, 400);
+  const {
+    result: { data: licenses },
+  } = useFetchLicenses({
+    filters: [
+      {
+        field: FILTER_TEXT_CATEGORY_KEY,
+        operator: "~",
+        value: debouncedInputValueLicense,
+      },
+    ],
+    sort: { field: "license", direction: "asc" },
+    page: { pageNumber: 1, itemsPerPage: 10 },
+  });
+
   const tableControlState = useTableControlState({
     tableName: "packages",
     persistenceKeyPrefix: TablePersistenceKeyPrefixes.packages,
@@ -63,6 +82,7 @@ export const PackageSearchProvider: React.FunctionComponent<
       namespace: "Namespace",
       version: "Version",
       type: "Type",
+      licenses: "Licenses",
       path: "Path",
       qualifiers: "Qualifiers",
       vulnerabilities: "Vulnerabilities",
@@ -103,8 +123,22 @@ export const PackageSearchProvider: React.FunctionComponent<
           { value: "noarch", label: "No Arch" },
         ],
       },
+      {
+        categoryKey: "license",
+        title: "License",
+        type: FilterType.asyncMultiselect,
+        placeholderText: "Filter results by license",
+        selectOptions: licenses.map((e) => {
+          return {
+            value: e.license,
+            label: e.license,
+          };
+        }),
+        onInputValueChange: setInputValueLicense,
+      },
     ],
-    isExpansionEnabled: false,
+    isExpansionEnabled: true,
+    expandableVariant: "compound",
   });
 
   const {

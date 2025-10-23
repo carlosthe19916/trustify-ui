@@ -2,7 +2,6 @@ import type React from "react";
 import { generatePath, Link } from "react-router-dom";
 
 import {
-  Label,
   List,
   ListItem,
   Toolbar,
@@ -39,6 +38,8 @@ import { useFetchSbomsLicenseIds } from "@app/queries/sboms";
 import { Paths } from "@app/Routes";
 
 import { PackageVulnerabilities } from "../package-list/components/PackageVulnerabilities";
+import { WithPackage } from "@app/components/WithPackage";
+import { VulnerabilityGallery } from "@app/components/VulnerabilityGallery";
 
 const renderLicenseWithMappings = (
   license: string,
@@ -82,7 +83,7 @@ export const PackagesBySbom: React.FC<PackagesProps> = ({ sbomId }) => {
         title: "License",
         placeholderText: "Filter results by license",
         type: FilterType.multiselect,
-        operator: "~",
+        operator: "=",
         logicOperator: "OR",
         selectOptions: licenseIds.map((license) => ({
           value: license.license_id,
@@ -191,8 +192,27 @@ export const PackagesBySbom: React.FC<PackagesProps> = ({ sbomId }) => {
                       modifier="breakWord"
                       {...getTdProps({ columnKey: "vulnerabilities" })}
                     >
-                      {item.purl[0] && (
-                        <PackageVulnerabilities packageId={item.purl[0].uuid} />
+                      {item.purl[0] ? (
+                        <WithPackage packageId={item.purl[0].uuid}>
+                          {(pkg, isFetching, fetchError) => (
+                            <PackageVulnerabilities
+                              pkg={pkg}
+                              isFetching={isFetching}
+                              fetchError={fetchError}
+                            />
+                          )}
+                        </WithPackage>
+                      ) : (
+                        <VulnerabilityGallery
+                          severities={{
+                            critical: 0,
+                            high: 0,
+                            medium: 0,
+                            low: 0,
+                            none: 0,
+                            unknown: 0,
+                          }}
+                        />
                       )}
                     </Td>
                     <Td
@@ -267,8 +287,7 @@ export const PackagesBySbom: React.FC<PackagesProps> = ({ sbomId }) => {
                                   {renderLicenseWithMappings(
                                     e.license_name,
                                     item.licenses_ref_mapping,
-                                  )}{" "}
-                                  <Label isCompact>{e.license_type}</Label>
+                                  )}
                                 </ListItem>
                               ))}
                             </List>
