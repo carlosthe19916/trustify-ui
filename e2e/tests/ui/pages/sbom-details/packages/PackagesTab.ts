@@ -23,6 +23,7 @@ export class PackagesTab {
   async getToolbar() {
     return await Toolbar.build(this._page, "Package toolbar");
   }
+  
 
   async getTable() {
     return await Table.build(this._page, "Package table");
