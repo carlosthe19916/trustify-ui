@@ -4,7 +4,6 @@ import {
   type FilterValueType,
   isDateRangeFilter,
   isMultiSelectFilter,
-  isStringFilter,
   isTypeaheadFilter,
   type TDateRange,
   type TFilterValue,
@@ -81,7 +80,6 @@ export class Toolbar<
 
       const filterType = this._filters[filterName];
 
-      
       if (isDateRangeFilter(filterType, filterValue)) {
         await this.applyDateRangeFilter(filterName, filterValue);
       }
@@ -95,8 +93,6 @@ export class Toolbar<
 
     await expect(this).toHaveLabels(filters);
   }
-
-  
 
   private async applyDateRangeFilter(
     _filterName: TFilterName,
@@ -147,8 +143,6 @@ export class Toolbar<
       await dropdownOption.click();
     }
   }
-
-
 
   /**
    * Clears all applied filters by clicking the "Clear all filters" button
