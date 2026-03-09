@@ -121,8 +121,6 @@ export const DrilldownSelect = ({
   const isOpen = controlledIsOpen ?? internalIsOpen;
   const setIsOpen = controlledSetIsOpen ?? setInternalIsOpen;
 
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
   const menuRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const [activeMenu, setActiveMenu] = useState<string>(ROOT_MENU_ID);
@@ -270,24 +268,24 @@ export const DrilldownSelect = ({
           focusable[nextIndex].focus();
         }
       }}
+      containsDrilldown
     >
-      <MenuSearch>
-        <MenuSearchInput>
-          <SearchInput
-            ref={searchInputRef}
-            value={searchInputValue}
-            onChange={(_event, value) => handleSearchInputChange(value)}
-            onClear={(e) => {
-              e.stopPropagation();
-              handleSearchInputChange("");
-            }}
-            {...searchInputProps}
-          />
-        </MenuSearchInput>
-      </MenuSearch>
-      <Divider />
       <MenuContent maxMenuHeight={"300px"}>
         <MenuList>
+          <MenuSearch>
+            <MenuSearchInput>
+              <SearchInput
+                value={searchInputValue}
+                onChange={(_event, value) => handleSearchInputChange(value)}
+                onClear={(e) => {
+                  e.stopPropagation();
+                  handleSearchInputChange("");
+                }}
+                {...searchInputProps}
+              />
+            </MenuSearchInput>
+          </MenuSearch>
+          <Divider />
           {currentParentId && (
             <>
               <MenuItem
@@ -328,6 +326,37 @@ export const DrilldownSelect = ({
     </Menu>
   );
 
+  const getMenuFocusableElements = () =>
+    Array.from(
+      menuRef.current?.querySelectorAll<HTMLElement>(
+        [
+          "input:not(:disabled)",
+          "li button:not(:disabled)",
+          'li a:not([aria-disabled="true"])',
+        ].join(","),
+      ) ?? [],
+    );
+
+  const onToggleArrowKeydown = (event: KeyboardEvent) => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
+      return;
+    }
+
+    event.preventDefault();
+
+    const focusableElements = getMenuFocusableElements();
+
+    let focusableElement: Element;
+    if (event.key === "ArrowDown") {
+      focusableElement = focusableElements[0];
+    } else {
+      focusableElement = focusableElements[focusableElements.length - 1];
+    }
+
+    if (focusableElement && focusableElement instanceof HTMLElement)
+      focusableElement.focus();
+  };
+
   return (
     <MenuContainer
       menu={menu}
@@ -337,12 +366,7 @@ export const DrilldownSelect = ({
       isOpen={isOpen}
       onOpenChange={setIsOpen}
       onOpenChangeKeys={["Escape"]}
-      onToggleKeydown={(event) => {
-        if (event.key === "ArrowDown") {
-          event.preventDefault();
-          searchInputRef?.current?.focus();
-        }
-      }}
+      onToggleKeydown={onToggleArrowKeydown}
       popperProps={{ appendTo: "inline" }}
     />
   );
