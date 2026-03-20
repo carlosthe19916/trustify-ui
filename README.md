@@ -65,3 +65,7 @@ Open browser at <http://localhost:3000>
 ## Contributing
 
 We welcome contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting changes.
+
+## Hello World
+
+Hello World! Welcome to Trustify UI.
