@@ -74,7 +74,6 @@ export const SbomTable: React.FC = () => {
   } = tableControls;
 
   const {
-    selectedItems: _selectedItems,
     propHelpers: { getSelectCheckboxTdProps },
   } = bulkSelectionControls;
 
@@ -297,7 +296,7 @@ export const SbomTable: React.FC = () => {
         onClose={() => setSbomToDelete(null)}
         onConfirm={() => {
           if (sbomToDelete) {
-            deleteSbom(sbomToDelete.id);
+            deleteSbom(sbomToDelete);
           }
         }}
       />

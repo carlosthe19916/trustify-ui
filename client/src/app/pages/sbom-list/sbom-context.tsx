@@ -67,11 +67,13 @@ export const SbomSearchContext =
   React.createContext<ISbomSearchContext>(contextDefaultValue);
 
 interface ISbomProvider {
+  sbomGroupId?: string;
   isBulkSelectionEnabled?: boolean;
   children: React.ReactNode;
 }
 
 export const SbomSearchProvider: React.FunctionComponent<ISbomProvider> = ({
+  sbomGroupId,
   isBulkSelectionEnabled,
   children,
 }) => {
@@ -157,11 +159,11 @@ export const SbomSearchProvider: React.FunctionComponent<ISbomProvider> = ({
   });
 
   const {
-    result: { data: advisories, total: totalItemCount },
+    result: { data: sboms, total: totalItemCount },
     isFetching,
     fetchError,
   } = useFetchSBOMs(
-    undefined,
+    sbomGroupId ?? null,
     getHubRequestParams({
       ...tableControlState,
       hubSortFieldKeys: {
@@ -177,7 +179,7 @@ export const SbomSearchProvider: React.FunctionComponent<ISbomProvider> = ({
   const tableControls = useTableControlProps({
     ...tableControlState,
     idProperty: "id",
-    currentPageItems: advisories,
+    currentPageItems: sboms,
     totalItemCount,
     isLoading: isFetching,
   });
