@@ -15,7 +15,7 @@ import {
   ToolbarFilter,
   type ToolbarLabel,
 } from "@patternfly/react-core";
-import { TimesIcon } from "@patternfly/react-icons";
+import TimesIcon from "@patternfly/react-icons/dist/esm/icons/times-icon";
 
 import type { IFilterControlProps } from "./FilterControl";
 import type {
@@ -25,8 +25,9 @@ import type {
 
 import "./select-overrides.css";
 
-export interface IMultiselectFilterControlProps<TItem>
-  extends IFilterControlProps<TItem, string> {
+export interface IMultiselectFilterControlProps<
+  TItem,
+> extends IFilterControlProps<TItem, string> {
   category: IMultiselectFilterCategory<TItem, string>;
   isScrollable?: boolean;
 }

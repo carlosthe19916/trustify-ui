@@ -46,7 +46,7 @@ export class ToolbarTable {
     ).toHaveAttribute("aria-sort", asc ? "ascending" : "descending");
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: allowed
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- allowed
   async verifyColumnContainsText(columnName: any, expectedValue: any) {
     const table = this.getTable();
     await expect(table.locator(`td[data-label="${columnName}"]`)).toContainText(
@@ -101,7 +101,6 @@ export class ToolbarTable {
       `xpath=//span[contains(@class,'form-control')]/following-sibling::span`,
     );
     const totalPages = await navTotal.textContent();
-    // biome-ignore lint/style/noNonNullAssertion: allowed
     return parseInt(totalPages!.replace("of", "").trim(), 10);
   }
 
@@ -116,7 +115,6 @@ export class ToolbarTable {
     const totalResultsText = await pagination
       .locator(`xpath=//button//b[not(contains (.,'-'))]`)
       .textContent();
-    // biome-ignore lint/style/noNonNullAssertion: allowed
     return parseInt(totalResultsText!.trim(), 10);
   }
 
@@ -210,7 +208,6 @@ export class ToolbarTable {
       `xpath=//button//b[contains (.,"-")]`,
     );
     const counterText = await pageCounter.textContent();
-    // biome-ignore lint/style/noNonNullAssertion: allowed
     const [min, max] = counterText!
       .split("-")
       .map((value) => parseInt(value.trim(), 10));
@@ -323,7 +320,7 @@ export class ToolbarTable {
       }
     }
     const sortedRows = [...dataRow].sort((rowA, rowB) => {
-      // biome-ignore lint/suspicious/noExplicitAny: allowed
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- allowed
       let compare: any;
       const valueA = rowA[index];
       const valueB = rowB[index];
@@ -367,7 +364,7 @@ export class ToolbarTable {
    * @returns true if the given input is in CVSS format
    */
   isCVSS(cvssString: string): boolean {
-    const cvssRegex = /^.+\((\d*\.*\d+?)\)$/;
+    const cvssRegex = /^.+\((\d*\.*\d+?)\)/;
     return !!cvssRegex.test(cvssString);
   }
 
@@ -387,7 +384,7 @@ export class ToolbarTable {
    * @returns CVSS score if the given input is in CVSS format
    */
   getCVSS(cvssString: string): number {
-    const cvssRegex = /^.+\((\d*\.*\d+?)\)$/;
+    const cvssRegex = /^.+\((\d*\.*\d+?)\)/;
     const cvssScore = cvssString.match(cvssRegex);
     if (!cvssScore) {
       return 0;

@@ -28,6 +28,7 @@ import {
   Stack,
   StackItem,
 } from "@patternfly/react-core";
+import { t_global_text_color_link_default } from "@patternfly/react-tokens";
 
 import { severityList } from "@app/api/model-utils";
 import type { ExtendedSeverity } from "@app/api/models";
@@ -64,6 +65,7 @@ export const MonitoringSection: React.FC = () => {
   } = useFetchSBOMs(null, {
     page: { pageNumber: 1, itemsPerPage: 10 },
     sort: { field: "ingested", direction: "desc" },
+    total: true,
   });
 
   const {
@@ -89,6 +91,7 @@ export const MonitoringSection: React.FC = () => {
   } = useFetchAdvisories({
     page: { pageNumber: 1, itemsPerPage: 10 },
     sort: { field: "ingested", direction: "desc" },
+    total: true,
   });
 
   return (
@@ -154,11 +157,16 @@ export const MonitoringSection: React.FC = () => {
                           }
                           tickLabelComponent={
                             <ChartLabel
-                              className="pf-v6-c-button pf-m-link pf-m-inline"
-                              style={[{ fill: "#0066cc" }]}
+                              style={[
+                                {
+                                  fill: t_global_text_color_link_default.var,
+                                  textDecoration: "underline",
+                                  cursor: "pointer",
+                                },
+                              ]}
                               events={{
                                 onClick: (event) => {
-                                  // biome-ignore lint/suspicious/noExplicitAny: allowed
+                                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- allowed
                                   const sbomName = (event.target as any)
                                     .innerHTML as string | null;
                                   const sbom = barchartSboms.find(

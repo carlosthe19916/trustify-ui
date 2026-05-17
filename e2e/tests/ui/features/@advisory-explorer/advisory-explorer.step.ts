@@ -60,7 +60,7 @@ Then(
   "The advisory {string} shows in the results",
   async ({ page }, advisoryID) => {
     await expect(
-      page.getByRole("gridcell").filter({ hasText: advisoryID }),
+      page.locator('td[data-label="ID"]').filter({ hasText: advisoryID }),
     ).toBeVisible();
   },
 );
@@ -115,7 +115,6 @@ Then(
     const match = totalText?.match(/of\s+(\d+)/);
     expect(match, "unable to parse pagination total").not.toBeNull();
 
-    // biome-ignore lint/style/noNonNullAssertion: allowed
     const total = Number(match![1]);
     expect(total).toBeGreaterThan(0);
   },

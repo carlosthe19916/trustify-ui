@@ -70,13 +70,10 @@ export const useUrlParams = <
     serializedParams: TSerializedParams<TURLParamKey>,
   ): TSerializedParams<TPrefixedURLParamKey> =>
     persistenceKeyPrefix
-      ? objectKeys(serializedParams).reduce(
-          (obj, key) => {
-            obj[withPrefix(key)] = serializedParams[key];
-            return obj;
-          },
-          {} as TSerializedParams<TPrefixedURLParamKey>,
-        )
+      ? objectKeys(serializedParams).reduce((obj, key) => {
+          obj[withPrefix(key)] = serializedParams[key];
+          return obj;
+        }, {} as TSerializedParams<TPrefixedURLParamKey>)
       : (serializedParams as TSerializedParams<TPrefixedURLParamKey>);
 
   /**
@@ -143,18 +140,14 @@ export const useUrlParams = <
   let allParamsEmpty = true;
   let params: TDeserializedParams = defaultValue;
   if (isEnabled) {
-    const serializedParams = keys.reduce(
-      (obj, key) => {
-        obj[key] = urlParams.get(withPrefix(key));
-        return obj;
-      },
-      {} as TSerializedParams<TURLParamKey>,
-    );
+    const serializedParams = keys.reduce((obj, key) => {
+      obj[key] = urlParams.get(withPrefix(key));
+      return obj;
+    }, {} as TSerializedParams<TURLParamKey>);
     allParamsEmpty = keys.every((key) => !serializedParams[key]);
     params = allParamsEmpty ? defaultValue : deserialize(serializedParams);
   }
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: allowed
   React.useEffect(() => {
     if (allParamsEmpty) setParams(defaultValue);
     // Leaving this rule enabled results in a cascade of unnecessary useCallbacks:
