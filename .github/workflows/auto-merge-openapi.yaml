@@ -8,12 +8,19 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  packages: write
+
+concurrency:
+  group: auto-merge-openapi-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
-  # Auto-merge trustify-ci-bot PRs that only change the OpenAPI spec
-  auto-merge-openapi:
+  # Check if only the OpenAPI spec changed
+  check-files:
     runs-on: ubuntu-latest
     if: github.actor == 'trustify-ci-bot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+    outputs:
+      auto_merge: ${{ steps.check-files.outputs.auto_merge }}
     steps:
       - name: Check changed files
         id: check-files
@@ -34,8 +41,107 @@ jobs:
           echo "Only client/openapi/trustd.yaml changed."
           echo "auto_merge=true" >> "$GITHUB_OUTPUT"
 
+  # Build UI image and upload as artifact
+  build-ui:
+    needs: check-files
+    if: needs.check-files.outputs.auto_merge == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Build and save trustify-ui image
+        run: |
+          docker build . -t ghcr.io/guacsec/trustify-ui:pr-test -f Dockerfile
+          docker save -o /tmp/trustify-ui.tar ghcr.io/guacsec/trustify-ui:pr-test
+
+      - name: Upload trustify-ui image as artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: trustify-ui
+          path: /tmp/trustify-ui.tar
+          retention-days: 1
+
+  # Build server image from Dockerfile.server and upload as artifact
+  build-server:
+    needs: check-files
+    if: needs.check-files.outputs.auto_merge == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Build and save trustd server image
+        run: |
+          docker build . -t ghcr.io/guacsec/trustd:pr-test -f Dockerfile.server
+          docker save -o /tmp/trustd.tar ghcr.io/guacsec/trustd:pr-test
+
+      - name: Upload trustd image as artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: trustd
+          path: /tmp/trustd.tar
+          retention-days: 1
+
+  # Run e2e tests with both locally-built images
+  e2e-tests:
+    needs: [build-ui, build-server]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download trustify-ui artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: trustify-ui
+          path: /tmp
+      - name: Load trustify-ui image
+        run: docker load --input /tmp/trustify-ui.tar
+
+      - name: Download trustd artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: trustd
+          path: /tmp
+      - name: Load trustd image
+        run: docker load --input /tmp/trustd.tar
+
+      - name: Checkout ui repo
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci --verbose --ignore-scripts --no-audit
+
+      - name: Start trustify
+        uses: ./.github/actions/start-trustify
+        with:
+          ui_image: ghcr.io/guacsec/trustify-ui:pr-test
+          server_image: ghcr.io/guacsec/trustd:pr-test
+
+      - name: Run Playwright tests
+        run: |
+          PW_TEST_CONNECT_WS_ENDPOINT=ws://localhost:5000/ TRUSTIFY_UI_URL=http://localhost:8081 AUTH_REQUIRED=false npm run -w e2e test
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-artifacts
+          path: |
+            e2e/test-results
+            e2e/playwright-report
+
+  # Approve and auto-merge only after e2e tests pass
+  approve-and-merge:
+    needs: e2e-tests
+    runs-on: ubuntu-latest
+    steps:
       - name: Approve PR
-        if: steps.check-files.outputs.auto_merge == 'true'
         env:
           GH_TOKEN: ${{ secrets.BOT_APPROVE_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -49,7 +155,6 @@ jobs:
           )"
 
       - name: Enable auto-merge
-        if: steps.check-files.outputs.auto_merge == 'true'
         env:
           GH_TOKEN: ${{ secrets.BOT_APPROVE_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
