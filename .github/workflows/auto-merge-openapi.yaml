@@ -2,8 +2,10 @@ name: Auto-merge dependabot PRs
 
 on:
   pull_request_target:
-    types: [ opened, synchronize ]
-    branches: [ main ]
+    types: [opened, synchronize]
+    branches:
+      - main
+      - "release/*"
 
 permissions:
   contents: write
@@ -41,10 +43,26 @@ jobs:
           echo "Only client/openapi/trustd.yaml changed."
           echo "auto_merge=true" >> "$GITHUB_OUTPUT"
 
-  # Build UI image and upload as artifact
-  build-ui:
+  # Determine server branch from PR target branch
+  discover-envs:
     needs: check-files
     if: needs.check-files.outputs.auto_merge == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      server_branch: ${{ steps.set-outputs.outputs.server_branch }}
+    steps:
+      - name: Extract server branch from PR target
+        id: set-outputs
+        env:
+          base_ref: ${{ github.event.pull_request.base.ref }}
+        run: |
+          branch=$(echo "${base_ref#refs/heads/}")
+          echo "server_branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "Server branch: $branch"
+
+  # Build UI image and upload as artifact
+  build-ui:
+    needs: discover-envs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -65,8 +83,7 @@ jobs:
 
   # Build server image from Dockerfile.server and upload as artifact
   build-server:
-    needs: check-files
-    if: needs.check-files.outputs.auto_merge == 'true'
+    needs: discover-envs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -75,7 +92,8 @@ jobs:
 
       - name: Build and save trustd server image
         run: |
-          docker build . -t ghcr.io/guacsec/trustd:pr-test -f Dockerfile.server
+          docker build . -t ghcr.io/guacsec/trustd:pr-test -f Dockerfile.server \
+            --build-arg server_branch=${{ needs.discover-envs.outputs.server_branch }}
           docker save -o /tmp/trustd.tar ghcr.io/guacsec/trustd:pr-test
 
       - name: Upload trustd image as artifact
