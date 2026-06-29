@@ -84,21 +84,12 @@ jobs:
     needs: discover-envs
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout UI repo
-        uses: actions/checkout@v6
-        with:
-          path: trustify-ui
-
-      - name: Checkout backend repo
-        uses: actions/checkout@v6
-        with:
-          path: trustify
-          repository: guacsec/trustify
-          ref: ${{ needs.discover-envs.outputs.server_branch }}
+      - uses: actions/checkout@v6
 
       - name: Build and save trustd server image
         run: |
-          docker build trustify -t ghcr.io/guacsec/trustd:pr-test -f trustify-ui/Dockerfile.server
+          docker build . -t ghcr.io/guacsec/trustd:pr-test -f Dockerfile.server \
+            --build-arg server_branch=${{ needs.discover-envs.outputs.server_branch }}
           docker save -o /tmp/trustd.tar ghcr.io/guacsec/trustd:pr-test
 
       - name: Upload trustd image as artifact
