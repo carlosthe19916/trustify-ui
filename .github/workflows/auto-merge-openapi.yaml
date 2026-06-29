@@ -20,7 +20,7 @@ jobs:
   # Check if only the OpenAPI spec changed
   check-files:
     runs-on: ubuntu-latest
-    if: github.actor == 'trustify-ci-bot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+    # if: github.actor == 'trustify-ci-bot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
     outputs:
       auto_merge: ${{ steps.check-files.outputs.auto_merge }}
     steps:
