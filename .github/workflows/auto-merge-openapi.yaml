@@ -1,4 +1,4 @@
-name: Auto-merge dependabot PRs
+name: Auto-merge openapi PRs
 
 on:
   pull_request_target:
@@ -66,8 +66,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Build and save trustify-ui image
         run: |
@@ -88,12 +86,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          repository: guacsec/trustify
+          ref: ${{ needs.discover-envs.outputs.server_branch }}
 
       - name: Build and save trustd server image
         run: |
-          docker build . -t ghcr.io/guacsec/trustd:pr-test -f Dockerfile.server \
-            --build-arg server_branch=${{ needs.discover-envs.outputs.server_branch }}
+          docker build . -t ghcr.io/guacsec/trustd:pr-test -f Dockerfile.server
           docker save -o /tmp/trustd.tar ghcr.io/guacsec/trustd:pr-test
 
       - name: Upload trustd image as artifact
@@ -126,8 +124,6 @@ jobs:
 
       - name: Checkout ui repo
         uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-node@v6
         with:
           node-version: 22
